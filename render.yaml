@@ -32,3 +32,5 @@ databases:
     databaseName: aquasignal
     user: aquasignal
     postgresMajorVersion: "16"
+    # Private network only; add an IP temporarily for a manual reset from outside.
+    ipAllowList: []
