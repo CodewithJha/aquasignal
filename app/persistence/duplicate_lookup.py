@@ -8,6 +8,7 @@ from pathlib import Path
 from app.application.errors import PersistenceFailure
 from app.domain.packet import ObservationPacket
 from app.flags.ports import DuplicateLookup, DuplicateMatch
+from app.persistence.config import DatabaseSettings
 
 
 class SqliteDuplicateLookup:
@@ -17,13 +18,25 @@ class SqliteDuplicateLookup:
     BEGIN on the process write UnitOfWork connection.
     """
 
-    def __init__(self, sqlite_path: Path) -> None:
-        self._sqlite_path = Path(sqlite_path)
+    def __init__(self, target: Path | DatabaseSettings) -> None:
+        self._settings = (
+            target
+            if isinstance(target, DatabaseSettings)
+            else DatabaseSettings(sqlite_path=Path(target))
+        )
+
+    def _connect(self):
+        if self._settings.postgres_url:
+            from app.persistence.factory import connect
+
+            return connect(self._settings)
+        conn = sqlite3.connect(str(self._settings.sqlite_path))
+        conn.row_factory = sqlite3.Row
+        return conn
 
     def find_duplicates(self, packet: ObservationPacket) -> tuple[DuplicateMatch, ...]:
         try:
-            conn = sqlite3.connect(str(self._sqlite_path))
-            conn.row_factory = sqlite3.Row
+            conn = self._connect()
             try:
                 rows = conn.execute(
                     """
@@ -35,7 +48,7 @@ class SqliteDuplicateLookup:
                 ).fetchall()
             finally:
                 conn.close()
-        except sqlite3.Error as exc:
+        except (sqlite3.Error, PersistenceFailure) as exc:
             raise PersistenceFailure("duplicate lookup failed") from exc
         return tuple(
             DuplicateMatch(

@@ -197,7 +197,7 @@ class SqliteAnalysisRunRepository:
                         ON ei.evidence_id = m.evidence_id
                     WHERE (ar.site_id IS NULL OR ar.site_id = '')
                       AND ei.site_id = ?
-                )
+                ) AS site_runs
                 ORDER BY started_at DESC, run_id DESC
                 """,
                 (site_id, site_id),

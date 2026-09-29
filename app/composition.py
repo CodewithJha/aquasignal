@@ -76,7 +76,7 @@ def build_services(
 
     if flag_engine is None:
         flag_engine = DeterministicFlagEngine(
-            duplicate_lookup=SqliteDuplicateLookup(resolved_settings.sqlite_path)
+            duplicate_lookup=SqliteDuplicateLookup(resolved_settings)
         )
     resolved_ai_settings = ai_settings or AiSettings.from_env()
     resolved_ai = ai if ai is not None else build_ai_assist(resolved_ai_settings)
@@ -110,7 +110,10 @@ def build_services(
             "ai_model": getattr(resolved_ai, "model_id", None),
             "investigation_copilot": type(resolved_copilot).__name__,
             "fhir_validator": type(resolved_validator).__name__,
-            "sqlite": str(resolved_settings.sqlite_path),
+            "database": resolved_settings.dialect,
+            "sqlite": (
+                str(resolved_settings.sqlite_path) if resolved_settings.sqlite_path else None
+            ),
             "reviewer_actor_id": reviewer_actor_id,
             "detector_set_version": analysis.detector_set_version,
             "auth": "not_implemented",
@@ -141,13 +144,13 @@ def get_services() -> AppServices:
 
 
 def check_database() -> bool:
-    """Health probe for the configured SQLite file. Never raises."""
+    """Health probe for the configured database. Never raises."""
     try:
         services = get_services()
     except Exception:
         logger.exception("health.services_unavailable")
         return False
-    return database_reachable(services.settings.sqlite_path)
+    return database_reachable(services.settings)
 
 
 def reset_services() -> None:

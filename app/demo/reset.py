@@ -8,8 +8,8 @@ Takes no arguments: it only ever targets ``DATABASE_URL``. Refuses to run
 unless ``DEMO_MODE`` is enabled.
 
 Strategy: apply pending migrations, delete every data row in one
-``BEGIN IMMEDIATE`` transaction (``schema_migrations`` is kept), then re-run
-``app.demo.seed``. The file is never replaced, so a server holding WAL
+``BEGIN IMMEDIATE`` transaction (``schema_migrations`` is kept; on PostgreSQL a
+single ``TRUNCATE … RESTART IDENTITY``), then re-run ``app.demo.seed``. The file is never replaced, so a server holding WAL
 connections stays consistent; requests during the few-millisecond gap between
 wipe and re-seed may briefly see an empty dataset.
 """
@@ -19,7 +19,6 @@ from __future__ import annotations
 import sqlite3
 import sys
 from dataclasses import dataclass
-from pathlib import Path
 
 from app.ai.config import AiSettings
 from app.composition import REPO_ROOT, build_services
@@ -45,13 +44,22 @@ class DemoResetResult:
 
 
 def _data_tables(conn: sqlite3.Connection) -> list[str]:
-    rows = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
-    ).fetchall()
+    if getattr(conn, "dialect", "sqlite") == "postgresql":
+        rows = conn.execute(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = current_schema() AND table_type = 'BASE TABLE'"
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        ).fetchall()
     return sorted(r[0] for r in rows if r[0] not in _KEEP_TABLES)
 
 
 def _clear_data(conn: sqlite3.Connection) -> None:
+    if getattr(conn, "dialect", "sqlite") == "postgresql":
+        _clear_data_postgres(conn)
+        return
     # Must be set outside a transaction; every table is emptied, so no
     # dangling references remain at commit.
     conn.execute("PRAGMA foreign_keys = OFF")
@@ -70,8 +78,23 @@ def _clear_data(conn: sqlite3.Connection) -> None:
         raise
 
 
-def _count(sqlite_path: Path, table: str) -> int:
-    conn = connect(sqlite_path)
+def _clear_data_postgres(conn: sqlite3.Connection) -> None:
+    # One TRUNCATE over every data table satisfies the foreign keys between
+    # them; RESTART IDENTITY matches clearing sqlite_sequence.
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        tables = _data_tables(conn)
+        if tables:
+            listed = ", ".join(f'"{t}"' for t in tables)
+            conn.execute(f"TRUNCATE {listed} RESTART IDENTITY")
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
+        raise
+
+
+def _count(settings: DatabaseSettings, table: str) -> int:
+    conn = connect(settings)
     try:
         return int(conn.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0])
     finally:
@@ -97,13 +120,12 @@ def reset_demo_database(
 
     services = build_services(settings=resolved, ai_settings=AiSettings())
     run_ids = seed_coimbra_demo(services.analysis, services.investigation)
-    path = resolved.sqlite_path
     return DemoResetResult(
         run_ids=tuple(run_ids),
-        evidence_items=_count(path, "evidence_items"),
-        analysis_runs=_count(path, "analysis_runs"),
-        investigation_cases=_count(path, "investigation_cases"),
-        observation_packets=_count(path, "observation_packets"),
+        evidence_items=_count(resolved, "evidence_items"),
+        analysis_runs=_count(resolved, "analysis_runs"),
+        investigation_cases=_count(resolved, "investigation_cases"),
+        observation_packets=_count(resolved, "observation_packets"),
     )
 
 

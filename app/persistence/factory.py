@@ -1,4 +1,8 @@
-"""Open SQLite connections, run migrations, build UnitOfWork factories."""
+"""Open database connections, run migrations, build UnitOfWork factories.
+
+SQLite (``sqlite:///…`` / path) is the default; ``postgres://`` /
+``postgresql://`` DATABASE_URLs use ``app.persistence.postgres``.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,13 @@ from app.persistence.unit_of_work import SqliteUnitOfWork
 BUSY_TIMEOUT_MS = 5000
 
 
-def connect(sqlite_path: Path) -> sqlite3.Connection:
+def connect(target: Path | DatabaseSettings) -> sqlite3.Connection:
+    """Open a connection to a SQLite path or to the configured database."""
+    if isinstance(target, DatabaseSettings):
+        if target.postgres_url:
+            return _connect_postgres(target.postgres_url)
+        target = target.sqlite_path
+    sqlite_path = target
     try:
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(
@@ -35,10 +45,19 @@ def connect(sqlite_path: Path) -> sqlite3.Connection:
         raise PersistenceFailure("failed to open database") from exc
 
 
-def database_reachable(sqlite_path: Path) -> bool:
+def _connect_postgres(url: str):
+    from app.persistence.postgres import connect_postgres
+
+    try:
+        return connect_postgres(url, lock_timeout_ms=BUSY_TIMEOUT_MS)
+    except sqlite3.Error as exc:
+        raise PersistenceFailure("failed to open database") from exc
+
+
+def database_reachable(target: Path | DatabaseSettings) -> bool:
     """Liveness probe: open the DB and run a trivial query. Never raises."""
     try:
-        conn = connect(sqlite_path)
+        conn = connect(target)
     except (PersistenceFailure, OSError):
         return False
     try:
@@ -51,14 +70,19 @@ def database_reachable(sqlite_path: Path) -> bool:
 
 
 def prepare_database(settings: DatabaseSettings) -> sqlite3.Connection:
-    """Open DB file, enable WAL, apply pending migrations. Returns a live connection."""
-    conn = connect(settings.sqlite_path)
+    """Open the DB (WAL for SQLite), apply pending migrations. Returns a live connection."""
+    conn = connect(settings)
+    if settings.sqlite_path is not None:
+        try:
+            conn.execute("PRAGMA journal_mode = WAL")
+        except sqlite3.Error as exc:
+            conn.close()
+            raise PersistenceFailure("failed to enable WAL journal mode") from exc
     try:
-        conn.execute("PRAGMA journal_mode = WAL")
-    except sqlite3.Error as exc:
+        apply_migrations(conn)
+    except Exception:
         conn.close()
-        raise PersistenceFailure("failed to enable WAL journal mode") from exc
-    apply_migrations(conn)
+        raise
     return conn
 
 
@@ -73,9 +97,8 @@ def open_unit_of_work(
     it for inspection and must close it.
     """
     conn = prepare_database(settings)
-    path = settings.sqlite_path
 
     def factory() -> SqliteUnitOfWork:
-        return SqliteUnitOfWork(connect(path), owns_connection=True)
+        return SqliteUnitOfWork(connect(settings), owns_connection=True)
 
     return conn, factory

@@ -9,19 +9,39 @@ from pathlib import Path
 # Default under project data/ — not a shared machine global DB.
 _DEFAULT_RELATIVE = Path("data") / "confirmgate.sqlite3"
 
+_POSTGRES_SCHEMES = ("postgres://", "postgresql://")
+
 
 @dataclass(frozen=True, slots=True)
 class DatabaseSettings:
-    """Resolved SQLite filesystem path (Postgres later via different adapter)."""
+    """Resolved database target: a SQLite file path or a PostgreSQL URL.
 
-    sqlite_path: Path
+    Exactly one of ``sqlite_path`` / ``postgres_url`` is set.
+    """
+
+    sqlite_path: Path | None = None
+    postgres_url: str | None = None
+
+    def __post_init__(self) -> None:
+        if (self.sqlite_path is None) == (self.postgres_url is None):
+            raise ValueError("DatabaseSettings needs exactly one of sqlite_path / postgres_url")
+
+    @property
+    def dialect(self) -> str:
+        return "postgresql" if self.postgres_url else "sqlite"
 
     @classmethod
     def from_env(cls, *, project_root: Path | None = None) -> DatabaseSettings:
         root = project_root or Path.cwd()
         raw = os.environ.get("DATABASE_URL", "").strip()
+        if is_postgres_url(raw):
+            return cls(postgres_url=raw)
         path = resolve_sqlite_path(raw, project_root=root)
         return cls(sqlite_path=path)
+
+
+def is_postgres_url(database_url: str) -> bool:
+    return database_url.strip().lower().startswith(_POSTGRES_SCHEMES)
 
 
 def resolve_sqlite_path(database_url: str, *, project_root: Path) -> Path:
