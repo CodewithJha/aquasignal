@@ -4,7 +4,7 @@ Track 3 (AI-Supported Assessment) entry for the [OneAquaHealth IEEE Global Hacka
 
 **Problem.** Citizen stream reports are inconsistent, so they are hard to reuse for One Health work. **Approach.** Deterministic quality checks, a mandatory human confirmation step, FHIR export only after a human finalizes, and a site investigation brief built from reproducible, deterministic detectors. AI is optional and advisory only.
 
-Live URL: `<LIVE_URL — replace after deployment; not deployed yet>` Submission deadline: 4 Oct 2026, 9:00 PM PDT (5 Oct 2026, 09:30 IST).
+Live URL: **https://aquasignal.onrender.com** (Render Free; the first request after ~15 min idle takes about a minute while the instance wakes, and each wake restores the seeded demo data). Submission deadline: 4 Oct 2026, 9:00 PM PDT (5 Oct 2026, 09:30 IST).
 
 ## What it does
 
@@ -88,6 +88,13 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
+To run the same suite against PostgreSQL (each test gets its own schema; the few tests that inspect the SQLite file are skipped):
+
+```bash
+docker run -d --name aq-pg -e POSTGRES_PASSWORD=<local-password> -p 55432:5432 postgres:16
+TEST_DATABASE_URL=postgresql://postgres:<local-password>@127.0.0.1:55432/postgres pytest
+```
+
 ### Demo
 
 ```bash
@@ -118,7 +125,17 @@ Any container host that builds from the `Dockerfile` works. The app does not nee
 - Run **one instance only**, because SQLite lives on a single volume.
 - Leave `AI_PROVIDER=null` unless you want optional AI. See [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 - **HTTPS and the observer cookie.** The `cg_observer` cookie gets the `Secure` flag only when the app sees the request as `https`. Behind a TLS-terminating proxy, that depends on uvicorn trusting the proxy's `X-Forwarded-Proto` header. The shipped `Dockerfile` runs uvicorn with `--proxy-headers --forwarded-allow-ips='*'`, so it trusts forwarded headers from any peer. This assumes the container is reachable only through a trusted reverse proxy; it is not safe in general. If the container port is exposed directly, clients can spoof the scheme; narrow `--forwarded-allow-ips` to your proxy's address. See [`SECURITY.md`](SECURITY.md).
-- For a public demo, set `DEMO_MODE=true` and `DEMO_RESET_ON_START=true` in the host's environment settings (they are not baked into the image). Every restart then restores the seeded dataset. Replace the Live URL placeholder above after deploy.
+- For a public demo, set `DEMO_MODE=true` and `DEMO_RESET_ON_START=true` in the host's environment settings (they are not baked into the image). Every restart then restores the seeded dataset.
+- Instead of a volume, you can point `DATABASE_URL` at PostgreSQL (`postgres://…` or `postgresql://…`). Migrations for PostgreSQL live in `app/persistence/migrations/postgres/` and run on start, like the SQLite ones.
+
+### Render (the live demo)
+
+[`render.yaml`](render.yaml) is a Render Blueprint: a **Free web service** built from the `Dockerfile` (Frankfurt, health check `/healthz`, auto-deploy from `main`) plus a **Free Render Postgres 16** database whose internal connection string is injected as `DATABASE_URL`. All state is in PostgreSQL, since the free instance's filesystem is ephemeral. The service sets `DEMO_MODE=true`, `DEMO_RESET_ON_START=true`, and `AI_PROVIDER=null`; the code defaults stay off.
+
+- **Cold starts.** Render spins a free service down after 15 minutes without traffic. The next request waits about a minute, and startup restores the seeded dataset, so visitor data does not survive an idle period. The app has no "seed only if empty" mode, so this is the reset mechanism for the demo.
+- **Manual reset.** Free services have no shell. Either restart or redeploy the service from the Render dashboard (the startup reset runs), or run the reset locally against the database's external connection string after adding your IP to the database's access-control list (it allows no external IPs by default): `DEMO_MODE=true DATABASE_URL='<external connection string>' python -m app.demo.reset`.
+- **Free Postgres expiry.** Render deletes free databases 30 days after creation (with a 14-day grace period to upgrade). The demo database was created on 29 Sep 2026 and expires on **29 Oct 2026**, after judging (5–15 Oct) and the winners' announcement (24 Oct).
+- **Forwarded headers.** Render's proxy is the only way into a web service and terminates TLS, so trusting `X-Forwarded-Proto` there is correct: the observer cookie is sent with `Secure` over HTTPS.
 
 ### Public demo behavior
 
@@ -142,7 +159,7 @@ DEMO_MODE=true python -m app.demo.reset
 docker exec <container> python -m app.demo.reset
 ```
 
-The reset applies any pending migrations, deletes all data rows in a single transaction (the migration table is kept), then re-seeds the synthetic fixtures. It edits the SQLite file in place and never swaps the file, so it is safe to run while the server is up. Requests made during the sub-second gap between the delete and the re-seed may briefly see an empty dataset.
+The reset applies any pending migrations, deletes all data rows in a single transaction (the migration table is kept), then re-seeds the synthetic fixtures. It edits the SQLite file in place and never swaps the file (on PostgreSQL it runs one `TRUNCATE … RESTART IDENTITY`), so it is safe to run while the server is up. Requests made during the sub-second gap between the delete and the re-seed may briefly see an empty dataset.
 
 Scheduled reset: use your platform's scheduled job, or a host crontab entry. The app has no scheduler of its own. For example, to reset every day at 03:00 UTC:
 

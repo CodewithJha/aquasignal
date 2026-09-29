@@ -7,7 +7,7 @@ This is a **hackathon demo**, not a multi-user production service.
 - **No authentication or authorization.** Anyone who can reach the URL can submit, confirm, finalize, analyze, open cases, and record decisions.
 - **One shared reviewer identity.** Every reviewer action is attributed to `demo-reviewer`. Audit records show *what* happened and *when*, not *which person* acted.
 - **No CSRF protection or rate limiting.** Do not expose the app with real personal data.
-- **Single instance, single SQLite file.** Back up the `/data` volume if you care about the demo data. Data is not encrypted at rest.
+- **Single instance, single SQLite file.** Back up the `/data` volume if you care about the demo data. Data is not encrypted at rest. The live demo uses Render Free PostgreSQL instead. It has no backups, it is reachable only from Render's private network (no external IPs allowed), and its connection string is set in Render, never in the repository.
 - **Photos are not stored.** Only the uploaded file name is recorded. Request bodies above `MAX_UPLOAD_BYTES` (default 10 MB) are refused with HTTP 413.
 - **Synthetic data.** The AquaSignal seed fixtures are synthetic and labelled as such.
 - **Demo reset.** With `DEMO_MODE=true`, the operator can restore the seeded dataset with `python -m app.demo.reset` (or on start with `DEMO_RESET_ON_START=true`). This wipes all visitor data. It is a shell command only, with no HTTP endpoint, and it refuses to run when `DEMO_MODE` is not enabled. Reset limits how long vandalised data stays visible. It does not stop anyone from submitting or deciding between resets.
@@ -20,7 +20,7 @@ Do not enter personal, health, or sensitive location data into a public deployme
 - The handle helps reviewers distinguish contributors. It is **not** a verified identity or authentication: clearing cookies or switching browsers gives a new handle, and anyone with the cookie can submit under that handle.
 - Observations created before this feature show `Observer unknown (pre-pseudonym)`. Synthetic seed rows show `Synthetic fixture`.
 - Handles are excluded from FHIR exports and from analysis snapshot and parameters hashes.
-- **HTTPS.** The cookie is marked `Secure` only when the app sees the request as `https`. Behind a TLS-terminating proxy this depends on uvicorn's proxy-header handling. The shipped `Dockerfile` runs `uvicorn ... --proxy-headers --forwarded-allow-ips='*'`, which trusts `X-Forwarded-Proto` from any peer. This **assumes the container is reachable only through a trusted reverse proxy** and is not safe in general: if the container port is exposed directly, clients can spoof the scheme. When the port is exposed, set `--forwarded-allow-ips` to the proxy address. This setup is not a production security review.
+- **HTTPS.** The cookie is marked `Secure` only when the app sees the request as `https`. Behind a TLS-terminating proxy this depends on uvicorn's proxy-header handling. The shipped `Dockerfile` runs `uvicorn ... --proxy-headers --forwarded-allow-ips='*'`, which trusts `X-Forwarded-Proto` from any peer. This **assumes the container is reachable only through a trusted reverse proxy** and is not safe in general: if the container port is exposed directly, clients can spoof the scheme. When the port is exposed, set `--forwarded-allow-ips` to the proxy address. On Render, the platform proxy is the only ingress to a web service, so the live demo meets that assumption. This setup is not a production security review.
 
 ## Secrets
 

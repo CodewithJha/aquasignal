@@ -4,7 +4,7 @@ All configuration comes from environment variables. The app does **not** load `.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATABASE_URL` | `<repo>/data/confirmgate.sqlite3` locally; `sqlite:////data/confirmgate.sqlite3` in Docker | SQLite file. Accepts `sqlite:///relative.db` (relative to the repo root), `sqlite:////absolute.db`, or a bare path. Parent directories are created and migrations run on start. |
+| `DATABASE_URL` | `<repo>/data/confirmgate.sqlite3` locally; `sqlite:////data/confirmgate.sqlite3` in Docker | SQLite file. Accepts `sqlite:///relative.db` (relative to the repo root), `sqlite:////absolute.db`, or a bare path. Parent directories are created and migrations run on start. A `postgres://` or `postgresql://` URL uses PostgreSQL instead (psycopg 3; migrations from `app/persistence/migrations/postgres/`). The URL is never logged. |
 | `MAX_UPLOAD_BYTES` | `10485760` (10 MB) | Largest request body accepted. Larger requests (for example a big photo on `/upload`) get a plain HTTP 413 page. Only the photo's file name is recorded, so there is no reason to raise this much. Invalid or non-positive values fall back to the default. |
 | `PORT` | `8000` | Used by the Docker `CMD`. Locally, pass it to uvicorn: `--port ${PORT:-8000}`. |
 | `AI_PROVIDER` | `null` | `null` / `none` / `off`: no AI and no network. `fake`: deterministic offline stub for tests and demos. `openai` (aliases `http`, `provider`): any OpenAI-compatible `/chat/completions` endpoint. Unknown values fall back to `null`. |
@@ -33,3 +33,5 @@ Notes:
 - AI failures or timeouts never block the core flow. The UI shows "AI advisory unavailable" and continues.
 - There is no auth configuration because there is no authentication. See [`../SECURITY.md`](../SECURITY.md).
 - There is one uvicorn worker. SQLite runs in WAL mode with a 5 s busy timeout, which suits a single-instance demo. Do not scale out to multiple containers against the same file.
+- On PostgreSQL, each unit of work takes a transaction-scoped advisory lock (the equivalent of SQLite's `BEGIN IMMEDIATE`), with a 5 s `lock_timeout`. Writes are serialized the same way as on SQLite.
+- `TEST_DATABASE_URL` (tests only): run `pytest` against PostgreSQL instead of temp SQLite files.
