@@ -1,0 +1,7 @@
+# Lint only (ruff defaults: pyflakes + pycodestyle errors). No formatter enforced.
+target-version = "py312"
+extend-exclude = ["data"]
+
+[lint.per-file-ignores]
+# Scripts put the repo root on sys.path before importing app.*.
+"scripts/*" = ["E402"]

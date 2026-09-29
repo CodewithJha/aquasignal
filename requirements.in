@@ -1,0 +1,12 @@
+# Top-level runtime dependencies (human-edited).
+# requirements.txt is the fully pinned closure used by Docker and CI.
+# After changing this file, regenerate the lock, e.g.:
+#   uv pip compile requirements.in -o requirements.txt
+fastapi>=0.115.0
+uvicorn>=0.32.0
+python-multipart>=0.0.12
+jinja2>=3.1.4
+pydantic>=2.9.0
+# Used at runtime by app/ai/http_chat.py (optional OpenAI-compatible provider)
+# and by fastapi.testclient in tests.
+httpx>=0.27.0
