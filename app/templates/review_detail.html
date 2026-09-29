@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not packet %}
+<section class="panel">
+  <h2>Packet not found</h2>
+  <p><a href="/review">Back to worklist</a></p>
+</section>
+{% else %}
+<section class="panel" aria-labelledby="detail-heading">
+  <header class="obs-header">
+    <p class="meta"><a href="/review">← Worklist</a></p>
+    <h2 id="detail-heading">Review packet</h2>
+    <p class="badge" aria-label="Workflow state">{{ state }} · {{ site_label }}</p>
+    <p class="meta">Packet <code>{{ packet_id }}</code> · revision {{ revision }}</p>
+  </header>
+
+  <div class="authority-status" role="status">
+    <p><strong>Reviewer accept</strong> moves the packet to <code>CONFIRMED</code> — it does <em>not</em> finalize or export FHIR.</p>
+    <p>soft_block_finalize may block later finalize; it does <em>not</em> mean REJECTED.</p>
+    <p class="meta">Auth not implemented — acting as demo reviewer <code>{{ reviewer_actor_id }}</code>.</p>
+  </div>
+
+  <section aria-labelledby="obs-data-heading">
+    <h3 id="obs-data-heading">Observation</h3>
+    <dl class="snapshot">
+      <dt>Site</dt><dd>{{ site_label }} ({{ packet.site.city }})</dd>
+      <dt>Effective at</dt>
+      <dd>{% if packet.effective_at %}{{ packet.effective_at.isoformat() }}{% else %}—{% endif %}</dd>
+      <dt>Submitter</dt><dd>{{ packet.submitter_display or '—' }}</dd>
+      <dt>Observer</dt><dd class="observer">{{ packet.observer_ref | observer_pseudonym }}</dd>
+      <dt>Notes</dt><dd>{{ notes or '—' }}</dd>
+      {% for code, value in field_values.items() %}
+      <dt>{{ code.replace('_', ' ') }}</dt>
+      <dd>{{ value }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+
+  <section aria-labelledby="findings-heading">
+    <h3 id="findings-heading">Findings</h3>
+    <p class="hint">Human message plus rule_id / code / severity / field / ruleset. Flags cannot be dismissed here — edit fields and revalidate.</p>
+    {% if findings %}
+    <table class="worklist findings">
+      <thead>
+        <tr>
+          <th scope="col">Severity</th>
+          <th scope="col">Message</th>
+          <th scope="col">rule_id</th>
+          <th scope="col">code</th>
+          <th scope="col">field</th>
+          <th scope="col">ruleset</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in findings %}
+        <tr class="{% if f.overridden %}muted{% endif %}">
+          <td><span class="flag-sev">{{ f.severity }}</span></td>
+          <td>{{ f.message }}{% if f.overridden %} <em>(overridden)</em>{% endif %}</td>
+          <td><code>{{ f.rule_id }}</code></td>
+          <td><code>{{ f.code }}</code></td>
+          <td>{% if f.field %}<code>{{ f.field }}</code>{% else %}—{% endif %}</td>
+          <td><code>{{ f.ruleset or '—' }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="ok" role="status">No flags on this packet.</p>
+    {% endif %}
+  </section>
+
+  {% if ai_panel.has_advisory or ai_panel.ai_unavailable %}
+  <section class="ai-panel" aria-labelledby="ai-review-heading">
+    <h3 id="ai-review-heading">AI advisory (not authority)</h3>
+    {% if ai_panel.ai_unavailable %}
+    <p class="hint" role="status">AI assistance unavailable for this packet.</p>
+    {% endif %}
+    {% if ai_panel.suggestion_rows %}
+    <ul class="ai-suggestions">
+      {% for row in ai_panel.suggestion_rows %}
+      <li>
+        <span class="ai-badge">AI</span>
+        <strong>{{ row.label }}</strong> → <code>{{ row.suggested_value }}</code>
+        {% if row.explanation %}<p class="hint">{{ row.explanation }}</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if ai_panel.flag_explanations %}
+    <ul class="ai-flag-explain">
+      {% for ex in ai_panel.flag_explanations %}
+      <li>
+        <span class="ai-badge">AI</span>
+        <code>{{ ex.code }}</code>: {{ ex.explanation }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="hint">Deterministic findings above remain authoritative for rules. Human accept/reject decides the packet.</p>
+  </section>
+  {% endif %}
+
+  <section aria-labelledby="evidence-heading">
+    <h3 id="evidence-heading">Evidence metadata</h3>
+    <p class="hint">Media attached. Image content is not analyzed by this system. Only the file name is recorded; the image is not stored and EXIF is not read.</p>
+    <dl class="snapshot">
+      <dt>Photo</dt>
+      <dd>{% if photo_name %}<code>{{ photo_name }}</code>{% else %}None recorded{% endif %}</dd>
+      <dt>Confirmation</dt>
+      <dd>{% if confirmation_hash %}Confirmed · hash <code>{{ confirmation_hash }}</code>{% else %}Not confirmed yet{% endif %}</dd>
+    </dl>
+  </section>
+
+  {% if can_act %}
+  <section aria-labelledby="edit-heading">
+    <h3 id="edit-heading">Edit &amp; revalidate</h3>
+    <form action="/review/{{ packet_id }}/edit" method="post" class="correct-form">
+      <input type="hidden" name="revision" value="{{ revision }}" />
+      <fieldset>
+        <legend>Correct fields (stays NEEDS_REVIEW)</legend>
+        {% for field in field_catalog %}
+        <label for="r-{{ field.code }}">{{ field.label }}
+          <select id="r-{{ field.code }}" name="{{ field.code }}">
+            {% for opt in field.options %}
+            <option value="{{ opt.value }}" {% if field_values.get(field.code) == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        {% endfor %}
+        <label for="r-notes">Notes
+          <input id="r-notes" name="notes" value="{{ notes }}" maxlength="500" />
+        </label>
+        <button type="submit">Save &amp; revalidate</button>
+      </fieldset>
+    </form>
+  </section>
+
+  <div class="actions-stack">
+    <form action="/review/{{ packet_id }}/accept" method="post">
+      <input type="hidden" name="revision" value="{{ revision }}" />
+      <button type="submit"{% if not can_accept %} disabled{% endif %}>Accept (confirm authority)</button>
+      <p class="hint">NEEDS_REVIEW → CONFIRMED. Does <em>not</em> export FHIR. Finalize remains a separate step.</p>
+      {% if not can_accept %}
+      <p class="hint" role="status">Accept blocked while standing hard_reject flags remain.</p>
+      {% endif %}
+    </form>
+
+    <form action="/review/{{ packet_id }}/reject" method="post" class="reject-form">
+      <input type="hidden" name="revision" value="{{ revision }}" />
+      <fieldset>
+        <legend>Reject</legend>
+        <label for="reason_code">Reason code (required)
+          <select id="reason_code" name="reason_code" required>
+            <option value="">— select —</option>
+            {% for code, label in rejection_reasons %}
+            <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label for="explanation">Explanation (optional)
+          <input id="explanation" name="explanation" maxlength="500" />
+        </label>
+        <button type="submit" class="danger">Reject packet</button>
+      </fieldset>
+    </form>
+  </div>
+  {% elif state == 'CONFIRMED' %}
+  <p class="ok" role="status">Accepted — state CONFIRMED. FHIR still requires an explicit finalize (citizen or later desk).</p>
+  <p><a href="/observation/{{ packet_id }}">Open citizen observation surface</a></p>
+  {% elif state == 'REJECTED' %}
+  <p class="hint" role="status">Rejected — terminal. FHIR export remains impossible.</p>
+  {% else %}
+  <p class="hint" role="status">This packet is not actionable on the reviewer desk (state {{ state }}).</p>
+  {% endif %}
+
+  <section aria-labelledby="prov-heading">
+    <h3 id="prov-heading">Provenance</h3>
+    <ol class="audit">
+      {% for e in events %}
+      <li>
+        <time datetime="{{ e.at.isoformat() }}">{{ e.at.isoformat() }}</time>
+        · <code>{{ e.action }}</code>
+        · {% if e.actor_type == "citizen" %}{{ packet.observer_ref | observer_pseudonym }}{% else %}{{ e.actor_type }}/{{ e.actor_id }}{% endif %}
+      </li>
+      {% else %}
+      <li>No durable events yet.</li>
+      {% endfor %}
+    </ol>
+  </section>
+</section>
+{% endif %}
+{% endblock %}

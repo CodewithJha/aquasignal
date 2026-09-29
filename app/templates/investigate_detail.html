@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% macro pair_card(pair) %}
+<li class="pair-card">
+  <p class="pair-head">
+    <strong>Disagree</strong>
+    · recorded {{ pair.time_delta_label }} apart
+  </p>
+  <div class="table-scroll">
+    <table class="pair-table">
+      <caption class="visually-hidden">Disagreeing fields between {{ pair.left.short_label }} and {{ pair.right.short_label }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Field</th>
+          <th scope="col">
+            {% if pair.left.confirmgate_observation_url %}<a href="{{ pair.left.confirmgate_observation_url }}">{{ pair.left.short_label }}</a>{% else %}{{ pair.left.short_label }}{% endif %}
+            <span class="pair-observer">{{ pair.left.observer_label }}</span>
+            <span class="pair-time"><time datetime="{{ pair.left.observed_at.isoformat() }}">{{ pair.left.observed_at.strftime("%d %b %Y %H:%M") }}</time></span>
+          </th>
+          <th scope="col">
+            {% if pair.right.confirmgate_observation_url %}<a href="{{ pair.right.confirmgate_observation_url }}">{{ pair.right.short_label }}</a>{% else %}{{ pair.right.short_label }}{% endif %}
+            <span class="pair-observer">{{ pair.right.observer_label }}</span>
+            <span class="pair-time"><time datetime="{{ pair.right.observed_at.isoformat() }}">{{ pair.right.observed_at.strftime("%d %b %Y %H:%M") }}</time></span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in pair.conflicting_fields %}
+        <tr>
+          <th scope="row">{{ c.field_code }}</th>
+          <td class="field-value">{{ c.left_value }}</td>
+          <td class="field-value">{{ c.right_value }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="meta">At least one compared field differs.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</li>
+{% endmacro %}
+
+{% macro pair_line(pair, verb) %}
+<li>
+  {{ pair.left.short_label }} ({{ pair.left.observer_label }}) and {{ pair.right.short_label }} ({{ pair.right.observer_label }})
+  · recorded {{ pair.time_delta_label }} apart · {{ verb }}
+</li>
+{% endmacro %}
+
+{% block content %}
+{% set synthetic_count = brief.evidence | selectattr("is_synthetic") | list | length %}
+{% set decision_count = namespace(n=0) %}
+{% for case in brief.cases %}{% set decision_count.n = decision_count.n + case.decisions | length %}{% endfor %}
+{% set ps = brief.pair_summary %}
+{% set disagreeing = brief.disagreeing_pairs %}
+{% set agreeing = brief.agreeing_pairs %}
+{% set duplicates = brief.duplicate_pairs %}
+
+<article class="inv-detail" aria-labelledby="brief-heading">
+
+  <header class="inv-hero panel">
+    <p class="eyebrow">SYSTEM ANALYSIS · not a human decision</p>
+    <h2 id="brief-heading">Investigation summary — {{ brief.site_label }}</h2>
+    {% if synthetic_count %}
+    <p class="synthetic-banner" role="note">
+      <strong>SYNTHETIC FIXTURE</strong> — {{ synthetic_count }} of {{ brief.evidence_count }}
+      observations are labelled test data, not live OneAquaHealth observations.
+    </p>
+    {% endif %}
+    <dl class="snapshot summary-grid">
+      <dt>Site</dt><dd>{{ brief.site_label }} ({{ brief.city }})</dd>
+      <dt>Evidence</dt>
+      <dd>
+        {% if synthetic_count == brief.evidence_count and synthetic_count %}
+        {{ brief.evidence_count }} synthetic fixture observation{{ "" if brief.evidence_count == 1 else "s" }}
+        {% elif synthetic_count %}
+        {{ brief.evidence_count }} observations ({{ brief.evidence_count - synthetic_count }} finalized, {{ synthetic_count }} synthetic)
+        {% else %}
+        {{ brief.evidence_count }} finalized observation{{ "" if brief.evidence_count == 1 else "s" }}
+        {% endif %}
+      </dd>
+      <dt>Analysis window</dt>
+      <dd>
+        {% if brief.window_start and brief.window_end %}
+        <time datetime="{{ brief.window_start.isoformat() }}">{{ brief.window_start.strftime("%d %b %Y") }}</time>
+        –
+        <time datetime="{{ brief.window_end.isoformat() }}">{{ brief.window_end.strftime("%d %b %Y") }}</time>
+        (UTC)
+        {% else %}
+        Not recorded on this run
+        {% endif %}
+      </dd>
+      <dt>Status</dt>
+      <dd><span class="status-pill status-{{ brief.status|lower }}">{{ brief.status }}</span></dd>
+    </dl>
+    {% if ps %}
+    <dl class="inv-counts" aria-label="Analysis counts">
+      <div>
+        <dt>Observation pairs compared</dt>
+        <dd>{{ ps.pairs_compared }}</dd>
+      </div>
+      <div>
+        <dt>Pairs that disagree</dt>
+        <dd>{{ ps.disagreeing_pairs }}</dd>
+      </div>
+      <div>
+        <dt>Pairs that agree</dt>
+        <dd>{{ ps.agreeing_pairs }}</dd>
+      </div>
+      <div>
+        <dt>Duplicate pairs</dt>
+        <dd>{{ ps.duplicate_pairs }}</dd>
+      </div>
+      <div>
+        <dt>Detector signals</dt>
+        <dd>{{ brief.signal_count }}</dd>
+      </div>
+      <div>
+        <dt>Human decisions</dt>
+        <dd>{{ decision_count.n }}</dd>
+      </div>
+    </dl>
+    {% endif %}
+    <p class="meta">
+      Counts only — no composite score, trust metric, or confidence percentage.
+      {% if ps and ps.comparison_window_label %}Observations are compared only when recorded within {{ ps.comparison_window_label }} of each other (same visit).{% endif %}
+      <a href="/investigate/sites/{{ brief.site_id }}">All runs for this site</a>
+    </p>
+    {% if advisory is defined and not advisory.available %}
+    <p class="meta inv-advisory-unavailable" role="status">
+      {% if advisory.validation_status == "null" %}
+      AI advisory: disabled. Deterministic analysis is complete without it.
+      {% else %}
+      AI advisory unavailable ({{ advisory.validation_status }}). Deterministic analysis remains available.
+      {% endif %}
+    </p>
+    {% endif %}
+  </header>
+
+  {% if brief.failed %}
+  <section class="panel inv-failed" aria-labelledby="failed-heading" role="alert">
+    <h3 id="failed-heading">Analysis failed</h3>
+    <p>{{ brief.failure_message or "Detectors could not complete for this run." }}</p>
+    <p class="meta">No stack traces are shown. See technical details below and re-seed if needed.</p>
+  </section>
+  {% endif %}
+
+  <section class="panel" aria-labelledby="found-heading">
+    <p class="eyebrow">SYSTEM ANALYSIS</p>
+    <h3 id="found-heading">What we found</h3>
+    {% if brief.findings %}
+    <ul class="found-list">
+      {% for line in brief.findings %}
+      <li>{{ line }}</li>
+      {% endfor %}
+    </ul>
+    {% elif not brief.failed %}
+    <p class="meta" role="status">No findings recorded for this run.</p>
+    {% endif %}
+    {% if brief.no_signal_success %}
+    <p class="meta inv-nosignal" role="status">
+      Detectors ran successfully and found no temporal shift or protocol conflict
+      in this evidence set. This is not a claim that water is safe.
+    </p>
+    {% endif %}
+    <p class="meta">Evidence change, conflict, and insufficiency only — no judgement of which observation is wrong, no cause, no water-safety conclusion.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="why-heading">
+    <h3 id="why-heading">Why?</h3>
+    {% if disagreeing %}
+    <p class="meta">
+      {{ disagreeing | length }} observation pair{{ "" if disagreeing | length == 1 else "s" }} disagree{{ "s" if disagreeing | length == 1 else "" }}.
+      Most relevant first (most differing fields, then closest in time).
+    </p>
+    <ul class="pair-list">
+      {% for pair in disagreeing[:3] %}{{ pair_card(pair) }}{% endfor %}
+    </ul>
+    {% if disagreeing | length > 3 %}
+    <details class="show-all">
+      <summary>Show all {{ disagreeing | length }} conflicts</summary>
+      <ul class="pair-list">
+        {% for pair in disagreeing[3:] %}{{ pair_card(pair) }}{% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+    {% else %}
+    <p role="status">No observation pairs disagree in this run.</p>
+    {% endif %}
+
+    {% if agreeing %}
+    <details class="show-all">
+      <summary>Show {{ agreeing | length }} agreeing pair{{ "" if agreeing | length == 1 else "s" }}</summary>
+      <ul class="pair-lines">
+        {% for pair in agreeing %}{{ pair_line(pair, "agree on every compared field") }}{% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+    {% if duplicates %}
+    <details class="show-all">
+      <summary>Show {{ duplicates | length }} duplicate pair{{ "" if duplicates | length == 1 else "s" }}</summary>
+      <ul class="pair-lines">
+        {% for pair in duplicates %}{{ pair_line(pair, "identical values — likely one duplicate submission") }}{% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+
+    {% for sig in brief.signals if sig.temporal_points %}
+    <details class="show-all temporal-viz">
+      <summary>Show temporal baseline timeline ({{ sig.temporal_points | length }} observations)</summary>
+      <p class="meta">Categorical / ordinal timeline (not continuous concentration)</p>
+      <ol class="timeline">
+        {% for pt in sig.temporal_points %}
+        <li>
+          <time datetime="{{ pt.observed_at }}">{{ pt.observed_at[:10] }}</time>
+          <span class="field-code">{{ pt.field_code }}</span>
+          <span class="field-value">{{ pt.value }}</span>
+          {% if pt.is_synthetic %}<span class="badge">SYNTHETIC</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </details>
+    {% endfor %}
+  </section>
+
+  <section class="panel" aria-labelledby="evidence-heading">
+    <h3 id="evidence-heading">Evidence</h3>
+    {% if not brief.evidence %}
+    <p role="status">No evidence items on this snapshot.</p>
+    {% else %}
+    <div class="table-scroll">
+      <table class="worklist evidence-table">
+        <caption class="visually-hidden">Observations frozen in this analysis</caption>
+        <thead>
+          <tr>
+            <th scope="col">Observation</th>
+            <th scope="col">Time (UTC)</th>
+            <th scope="col">Key field values</th>
+            <th scope="col">Observer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ev in brief.evidence %}
+          <tr class="{% if ev.is_synthetic %}evidence-synthetic{% else %}evidence-confirmgate{% endif %}">
+            <td>
+              {% if ev.confirmgate_observation_url %}<a href="{{ ev.confirmgate_observation_url }}">{{ ev.short_label }}</a>{% else %}{{ ev.short_label }}{% endif %}
+            </td>
+            <td><time datetime="{{ ev.observed_at.isoformat() }}">{{ ev.observed_at.strftime("%d %b %Y %H:%M") }}</time></td>
+            <td>
+              {% for code, value in ev.fields.items() %}<span class="field-code">{{ code }}</span> <span class="field-value">{{ value }}</span>{% if not loop.last %} · {% endif %}{% else %}<span class="meta">No field map available</span>{% endfor %}
+            </td>
+            <td><span class="observer">{{ ev.observer_label }}</span>{% if ev.confirmgate_observation_url %} · ConfirmGate finalized observation{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if advisory is defined and advisory.available %}
+  <section class="panel inv-advisory" aria-labelledby="advisory-heading">
+    <p class="eyebrow">AI ADVISORY · not authority</p>
+    <h3 id="advisory-heading">AI advisory</h3>
+    <p>{{ advisory.summary }}</p>
+    {% if advisory.signal_explanations %}
+    <ul>
+      {% for item in advisory.signal_explanations %}
+      <li><code>{{ item.signal_id }}</code> — {{ item.explanation }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if advisory.missing_evidence %}
+    <p class="meta">Suggested missing evidence (closed vocabulary):
+      {% for code in advisory.missing_evidence %}
+      <code>{{ code }}</code>{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </p>
+    {% endif %}
+    {% if advisory.limitations %}
+    <ul class="meta">
+      {% for lim in advisory.limitations %}
+      <li>{{ lim }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="meta">
+      Provider <code>{{ advisory.provider }}</code>
+      · model <code>{{ advisory.model }}</code>
+      · prompt <code>{{ advisory.prompt_version }}</code>
+      · brief hash <code class="copyable">{{ advisory.input_brief_hash }}</code>
+      · validation <code>{{ advisory.validation_status }}</code>
+    </p>
+  </section>
+  {% endif %}
+
+  <section class="panel" aria-labelledby="case-heading">
+    <p class="eyebrow">HUMAN DECISION · authority</p>
+    <h3 id="case-heading">Human decision</h3>
+    <p class="meta">{{ brief.human_review_note }}</p>
+    {% if not brief.cases %}
+    <p role="status">No investigation case is open for this analysis.</p>
+    {% if brief.status == "SUCCEEDED" %}
+    <form method="post" action="/investigate/analyses/{{ brief.run_id }}/cases">
+      <button type="submit">Open investigation case</button>
+    </form>
+    {% endif %}
+    {% else %}
+    <ul class="case-list">
+      {% for case in brief.cases %}
+      <li class="case-item">
+        <p>
+          Case state <strong>{{ case.state }}</strong>
+          · {{ case.decisions | length }} human decision{{ "" if case.decisions | length == 1 else "s" }}
+          · opened <time datetime="{{ case.opened_at.isoformat() }}">{{ case.opened_at.strftime("%d %b %Y %H:%M") }} UTC</time>
+        </p>
+        {% if case.decisions %}
+        <ol class="decision-list" aria-label="Human decisions">
+          {% for d in case.decisions %}
+          <li>
+            <time datetime="{{ d.decided_at.isoformat() }}">{{ d.decided_at.strftime("%Y-%m-%d %H:%M") }} UTC</time>
+            · <code>{{ d.decision_code }}</code>
+            · {{ d.actor_type }} <code>{{ d.actor_id }}</code>
+            <p>{{ d.rationale }}</p>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <p class="meta" role="status">No human decisions recorded yet.</p>
+        {% endif %}
+        {% if not case.is_terminal %}
+        <form method="post" action="/investigate/cases/{{ case.case_id }}/decisions" class="decision-form">
+          <input type="hidden" name="expected_version" value="{{ case.version }}" />
+          <label for="decision-{{ case.case_id }}">Decision</label>
+          <select id="decision-{{ case.case_id }}" name="decision_code" required>
+            {% for value, label in decision_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+          <label for="rationale-{{ case.case_id }}">Rationale (required)</label>
+          <textarea id="rationale-{{ case.case_id }}" name="rationale" rows="3" required></textarea>
+          <button type="submit">Record human decision</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <section class="panel" aria-labelledby="tech-heading">
+    <h3 id="tech-heading">Technical details</h3>
+    <details class="tech-details">
+      <summary>Show technical details (reproducibility, detector versions, raw detector output)</summary>
+
+      <h4 id="repro-heading">Reproducibility</h4>
+      <p class="meta">How this analysis was produced. Values are copyable.</p>
+      <dl class="snapshot repro-grid">
+        <dt>Run id</dt><dd><code class="copyable">{{ brief.reproducibility.run_id }}</code></dd>
+        <dt>Snapshot id</dt>
+        <dd>{% if brief.reproducibility.snapshot_id %}<code class="copyable">{{ brief.reproducibility.snapshot_id }}</code>{% else %}—{% endif %}</dd>
+        <dt>Snapshot hash</dt><dd><code class="copyable">{{ brief.reproducibility.snapshot_hash }}</code></dd>
+        <dt>Parameters hash</dt><dd><code class="copyable">{{ brief.reproducibility.parameters_hash }}</code></dd>
+        <dt>Detector set</dt><dd><code class="copyable">{{ brief.reproducibility.detector_set_version }}</code></dd>
+        <dt>Detector versions</dt>
+        <dd>
+          {% for d in brief.detector_versions %}<code>{{ d.detector_id }}:{{ d.detector_version }}</code>{% if not loop.last %}, {% endif %}{% else %}No detector recorded a durable signal on this run.{% endfor %}
+        </dd>
+        <dt>Canonicalization</dt><dd>{% if brief.reproducibility.vocabulary_version %}<code>{{ brief.reproducibility.vocabulary_version }}</code>{% else %}—{% endif %}</dd>
+        <dt>Engines</dt>
+        <dd>
+          Flag engine <code>{{ flag_engine_name }} {{ flag_engine_version }}</code>
+          · AI advisory {% if ai_model == "null" %}disabled{% else %}<code>{{ ai_model }}</code>{% endif %}
+        </dd>
+        <dt>Status</dt><dd>{{ brief.reproducibility.status }}</dd>
+        <dt>Evidence count</dt><dd>{{ brief.reproducibility.evidence_count }}</dd>
+        <dt>Field relations</dt>
+        <dd>{{ brief.stance.conflicting }} conflicting · {{ brief.stance.supporting }} supporting · {{ brief.stance.duplicates }} duplicate (one per compared field)</dd>
+        {% if brief.cases %}
+        <dt>Case ids</dt>
+        <dd>{% for case in brief.cases %}<code>{{ case.case_id }}</code> (ref <code>{{ case.reproducibility_ref }}</code>){% if not loop.last %}, {% endif %}{% endfor %}</dd>
+        {% endif %}
+      </dl>
+
+      <h4>Authority layers</h4>
+      <ol class="authority-list">
+        <li><strong>SYSTEM ANALYSIS</strong> — deterministic detectors on a frozen snapshot.</li>
+        <li><strong>AI ADVISORY</strong> — optional restatement only; never mutates signals or cases.</li>
+        <li><strong>HUMAN DECISION</strong> — case conclusions require a human actor.</li>
+      </ol>
+
+      <h4>Detector output</h4>
+      {% if not brief.signals %}
+      <p class="meta" role="status">No persisted signals for this run.</p>
+      {% else %}
+      <ul class="signal-list">
+        {% for sig in brief.signals %}
+        <li class="signal-item {% if sig.is_insufficient %}signal-insufficient{% endif %}">
+          <p><span class="signal-type">{{ sig.signal_type }}</span> · <code>{{ sig.detector_id }}:{{ sig.detector_version }}</code></p>
+          <p>{{ sig.summary }}</p>
+          <p class="meta">Cites {{ sig.evidence_count }} observation{{ "" if sig.evidence_count == 1 else "s" }}:
+            {% for eid in sig.evidence_ids %}<code>{{ eid }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
+          </p>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <p class="meta">{{ brief.system_analysis_note }}</p>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="history-heading">
+    <h3 id="history-heading">Run history ({{ brief.site_label }})</h3>
+    <details>
+      <summary>Show {{ brief.run_history | length }} run{{ "" if brief.run_history | length == 1 else "s" }} — older runs are never overwritten</summary>
+      <ul class="run-history">
+        {% for row in brief.run_history %}
+        <li>
+          <a href="/investigate/analyses/{{ row.run_id }}">{{ row.run_id }}</a>
+          · {{ row.status }} · {{ row.started_at.strftime("%Y-%m-%d %H:%M") }} UTC
+          · {{ row.evidence_count }} observations · {{ row.signal_count }} signals
+          {% if row.run_id == brief.run_id %}<span class="badge">Current</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+  </section>
+
+</article>
+{% endblock %}

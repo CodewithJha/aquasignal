@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel" aria-labelledby="submit-heading">
+  <h2 id="submit-heading">Submit a stream observation</h2>
+  <p class="lede">
+    Choose an official OneAquaHealth city site, record protocol-lite field checks,
+    and optionally attach a photo (its content is not analyzed). Quality flags run before anything
+    becomes authoritative. AI is not required.
+  </p>
+
+  <form action="/upload" method="post" enctype="multipart/form-data" novalidate>
+    <fieldset>
+      <legend>Site</legend>
+      <label for="site">{{ "Observation site" }}
+        <select id="site" name="site" required autocomplete="off">
+          <option value="">— select a city site —</option>
+          {% for s in sites %}
+          <option value="{{ s.id }}" {% if field_values.get('site') == s.id %}selected{% endif %}>{{ s.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Sensory checks <span class="req-note">(needed before finalize)</span></legend>
+      {% for field in field_catalog if field.code in ['foam', 'colour', 'smell'] %}
+      <label for="{{ field.code }}">{{ field.label }}
+        <select id="{{ field.code }}" name="{{ field.code }}">
+          {% for opt in field.options %}
+          <option value="{{ opt.value }}" {% if field_values.get(field.code) == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+        {% if field.help %}<span class="hint">{{ field.help }}</span>{% endif %}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset>
+      <legend>Vegetation &amp; channel <span class="req-note">(optional)</span></legend>
+      {% for field in field_catalog if field.code not in ['foam', 'colour', 'smell'] %}
+      <label for="{{ field.code }}">{{ field.label }}
+        <select id="{{ field.code }}" name="{{ field.code }}">
+          {% for opt in field.options %}
+          <option value="{{ opt.value }}" {% if field_values.get(field.code) == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+        {% if field.help %}<span class="hint">{{ field.help }}</span>{% endif %}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset>
+      <legend>Evidence</legend>
+      <label for="photo">Photo evidence (optional)
+        <input id="photo" type="file" name="photo" accept="image/*" />
+      </label>
+      <p class="hint">Media attached. Image content is not analyzed by this system. Only the file name is recorded in the audit trail; the image itself is not stored.</p>
+      <label for="notes">Notes for context (not a lab indicator)
+        <input id="notes" name="notes" value="{{ notes }}" maxlength="500" />
+      </label>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit">Submit for quality flags</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

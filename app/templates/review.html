@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel" aria-labelledby="queue-heading">
+  <header class="obs-header">
+    <h2 id="queue-heading">Reviewer worklist</h2>
+    <p class="lede">
+      Packets in <code>NEEDS_REVIEW</code> awaiting curator decision.
+      Accept confirms authority but does <em>not</em> export FHIR.
+    </p>
+    <p class="meta" role="status">
+      Auth not implemented — demo reviewer <code>{{ reviewer_actor_id }}</code>.
+      Ordering: oldest first.
+    </p>
+  </header>
+
+  {% if not items %}
+  <p class="ok" role="status">Queue empty. Escalate a flagged packet from the citizen surface, or seed a demo fixture via the real escalate path.</p>
+  <p><a href="/upload">Citizen submit</a></p>
+  {% else %}
+  <table class="worklist">
+    <caption class="visually-hidden">NEEDS_REVIEW packets</caption>
+    <thead>
+      <tr>
+        <th scope="col">Packet</th>
+        <th scope="col">Site</th>
+        <th scope="col">Time</th>
+        <th scope="col">Flags</th>
+        <th scope="col">State</th>
+        <th scope="col">Review reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td><a href="/review/{{ item.packet_id }}">{{ item.packet_id[:10] }}…</a></td>
+        <td>{{ item.site_label }}</td>
+        <td>{% if item.effective_at %}{{ item.effective_at.strftime('%Y-%m-%d %H:%M') }} UTC{% elif item.created_at %}{{ item.created_at.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}—{% endif %}</td>
+        <td>
+          <span class="flag-sev">{{ item.max_severity or 'none' }}</span>
+          ×{{ item.flag_count }}
+        </td>
+        <td><code>{{ item.workflow_state }}</code></td>
+        <td>{{ item.review_reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

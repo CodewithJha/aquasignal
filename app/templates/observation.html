@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not packet %}
+<section class="panel">
+  <h2>Observation not found</h2>
+  <p><a href="/upload">Submit a new observation</a></p>
+</section>
+{% else %}
+<section class="panel" aria-labelledby="obs-heading">
+  <header class="obs-header">
+    <h2 id="obs-heading">Review observation</h2>
+    <p class="badge" aria-label="Workflow state">{{ state }} · {{ site_label }}</p>
+    <p class="meta">Packet <code>{{ packet_id }}</code> · Submitted by <strong class="observer">{{ packet.observer_ref | observer_pseudonym }}</strong></p>
+  </header>
+
+  <div class="authority-status" role="status">
+    <p><strong>Pre-confirm evaluation</strong> ran with {{ flag_engine_name }} ({{ flag_engine_version }}).</p>
+    <p>AI assist: <strong>{{ ai_model }}</strong> — suggestions are never authoritative and are not required.</p>
+    <p><strong>Confirm</strong> freezes fields. <strong>Finalize</strong> is a separate step that unlocks FHIR export.</p>
+  </div>
+
+  {% if flag_groups.needs_correction %}
+  <section class="flags flags-block" aria-labelledby="needs-heading">
+    <h3 id="needs-heading">Needs correction</h3>
+    <p class="hint">These block confirm and/or finalize. No trust or confidence score is shown.</p>
+    <ul>
+      {% for f in flag_groups.needs_correction %}
+      <li>
+        <span class="flag-sev">{{ f.severity }}</span>
+        <strong>{{ f.title }}</strong>
+        <p>{{ f.guidance }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if flag_groups.warnings %}
+  <section class="flags flags-warn" aria-labelledby="warn-heading">
+    <h3 id="warn-heading">Warnings</h3>
+    <ul>
+      {% for f in flag_groups.warnings %}
+      <li>
+        <span class="flag-sev">{{ f.severity }}</span>
+        <strong>{{ f.title }}</strong>
+        <p>{{ f.guidance }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if not flag_groups.needs_correction and not flag_groups.warnings %}
+  <p class="ok" role="status">No quality flags. You may confirm when ready.</p>
+  {% endif %}
+
+  {% if ai_panel.ai_unavailable %}
+  <p class="hint" role="status">AI assistance unavailable — continue with rules and your values.</p>
+  {% endif %}
+
+  {% if ai_panel.has_advisory %}
+  <section class="ai-panel" aria-labelledby="ai-heading">
+    <h3 id="ai-heading">AI suggestion</h3>
+    <p class="hint">AI suggestion. Review before using. Distinct from deterministic flags and from your confirmed values.</p>
+
+    {% if ai_panel.suggestion_rows %}
+    <ul class="ai-suggestions">
+      {% for row in ai_panel.suggestion_rows %}
+      <li>
+        <strong>{{ row.label }}</strong>
+        <span class="ai-badge">AI</span>
+        <p>Suggested: <code>{{ row.suggested_value }}</code>
+          {% if row.current_value %} (your value: <code>{{ row.current_value }}</code>){% else %} (you have not set this field){% endif %}
+        </p>
+        {% if row.explanation %}<p class="hint">{{ row.explanation }}</p>{% endif %}
+        {% if can_use_suggestions %}
+        <div class="ai-actions">
+          <form action="/observation/{{ packet_id }}/suggestion/accept" method="post">
+            <input type="hidden" name="field" value="{{ row.field }}" />
+            <button type="submit">Use suggestion</button>
+          </form>
+          <form action="/observation/{{ packet_id }}/suggestion/decline" method="post">
+            <input type="hidden" name="field" value="{{ row.field }}" />
+            <button type="submit" class="secondary">Keep my value</button>
+          </form>
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if ai_panel.flag_explanations %}
+    <h4>Flag explanations (advisory)</h4>
+    <p class="hint">Grounded in the deterministic flag message — severity and blocking are unchanged.</p>
+    <ul class="ai-flag-explain">
+      {% for ex in ai_panel.flag_explanations %}
+      <li>
+        <span class="ai-badge">AI</span>
+        <code>{{ ex.code }}</code> · {{ ex.severity }}
+        <p>{{ ex.explanation }}</p>
+        <p class="meta">Source flag: {{ ex.source_message }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if can_edit %}
+  <form action="/observation/{{ packet_id }}/correct" method="post" class="correct-form">
+    <fieldset>
+      <legend>Correct fields &amp; revalidate</legend>
+      <p class="hint">Saving re-runs the rules engine on this same observation (no duplicate packet).</p>
+      {% for field in field_catalog %}
+      <label for="c-{{ field.code }}">{{ field.label }}
+        <select id="c-{{ field.code }}" name="{{ field.code }}">
+          {% for opt in field.options %}
+          <option value="{{ opt.value }}" {% if field_values.get(field.code) == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endfor %}
+      <label for="c-notes">Notes
+        <input id="c-notes" name="notes" value="{{ notes }}" maxlength="500" />
+      </label>
+      <button type="submit">Save &amp; revalidate flags</button>
+    </fieldset>
+  </form>
+  {% else %}
+  <section aria-labelledby="snapshot-heading">
+    <h3 id="snapshot-heading">Field snapshot</h3>
+    <dl class="snapshot">
+      {% for code, value in field_values.items() %}
+      <dt>{{ code.replace('_', ' ') }}</dt>
+      <dd>{{ value }}</dd>
+      {% endfor %}
+    </dl>
+    {% if confirmation_hash %}
+    <p class="meta">Confirmation hash: <code>{{ confirmation_hash }}</code></p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <div class="actions-stack">
+    {% if can_confirm %}
+    <form action="/observation/{{ packet_id }}/confirm" method="post">
+      <button type="submit">Confirm observation (human authority)</button>
+      <p class="hint">This does <em>not</em> export FHIR. Finalize is next.</p>
+    </form>
+    {% elif state == 'FLAGGED' and not flag_groups.can_confirm %}
+    <p class="hint" role="status">Confirm is disabled until items under Needs correction are fixed.</p>
+    {% endif %}
+
+    {% if can_request_review %}
+    <form action="/observation/{{ packet_id }}/request-review" method="post">
+      <button type="submit" class="secondary">Send to reviewer desk</button>
+      <p class="hint">FLAGGED → NEEDS_REVIEW. Does not confirm or finalize. soft_block alone is not auto-escalation.</p>
+    </form>
+    {% endif %}
+
+    {% if can_finalize %}
+    <form action="/observation/{{ packet_id }}/finalize" method="post">
+      <label for="ohs">One Health sentence (cited, non-diagnostic)
+        <textarea id="ohs" name="one_health_sentence" rows="3">{{ one_health_sentence }}</textarea>
+      </label>
+      <button type="submit">Finalize for FHIR export</button>
+      <p class="hint">Explicit finalize — separate from confirm. Export uses this frozen snapshot only.</p>
+    </form>
+    {% elif is_confirmed and not is_finalized %}
+    <p class="hint" role="status">Finalize blocked — standing soft/hard flags or StructuralGuard prerequisites.</p>
+    {% endif %}
+
+    {% if is_finalized %}
+    <p class="ok">Finalized. <a href="/fhir?packet_id={{ packet_id }}">View FHIR export result</a></p>
+    {% endif %}
+  </div>
+
+  <details class="provenance">
+    <summary>Audit trail (provenance)</summary>
+    <ol>
+      {% for event in events %}
+      <li><time datetime="{{ event.at }}">{{ event.at }}</time> — {{ event.action }} ({% if event.actor_type == "citizen" %}{{ packet.observer_ref | observer_pseudonym }}{% else %}{{ event.actor_type }}{% endif %})</li>
+      {% endfor %}
+    </ol>
+  </details>
+</section>
+{% endif %}
+{% endblock %}

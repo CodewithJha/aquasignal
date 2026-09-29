@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel inv-panel" aria-labelledby="list-heading">
+  <p class="eyebrow">AquaSignal · system analysis history</p>
+  <h2 id="list-heading">{{ site.display_name }}</h2>
+  <p class="lede">
+    Append-only analysis runs for this site. Status is SUCCEEDED or FAILED —
+    never Good / Bad / Risk / Healthy.
+  </p>
+
+  <form method="post" action="/investigate/sites/{{ site.site_id }}/analyze" class="inv-analyze">
+    <p class="meta">
+      Runs the versioned detectors on every FINALIZED ConfirmGate observation for
+      this site. Unfinalized, rejected, and withdrawn observations are never included.
+      Each run is new and append-only.
+    </p>
+    <button type="submit">Analyze finalized observations</button>
+  </form>
+
+  {% if empty %}
+  <div class="inv-empty" role="status">
+    <p><strong>No analysis yet</strong> for {{ site.display_name }}.</p>
+    <p class="meta">
+      Finalize an observation in ConfirmGate and press Analyze, or seed the
+      synthetic Coimbra fixtures: <code>python scripts/seed_aquasignal_demo.py</code>
+    </p>
+    <p><a href="/investigate">Choose another site</a></p>
+  </div>
+  {% else %}
+  <table class="worklist" aria-describedby="list-heading">
+    <caption class="visually-hidden">Analysis runs for {{ site.display_name }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">Started (UTC)</th>
+        <th scope="col">Status</th>
+        <th scope="col">Observations</th>
+        <th scope="col">Evidence source</th>
+        <th scope="col">Signals</th>
+        <th scope="col">Detector set</th>
+        <th scope="col">Run</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in analyses %}
+      <tr>
+        <td><time datetime="{{ row.started_at.isoformat() }}">{{ row.started_at.strftime("%Y-%m-%d %H:%M") }}</time></td>
+        <td>
+          <span class="status-pill status-{{ row.status|lower }}" aria-label="Status {{ row.status }}">{{ row.status }}</span>
+        </td>
+        <td>{{ row.evidence_count }}</td>
+        <td>
+          <span class="status-pill origin-{{ row.evidence_origin|lower|replace(' ', '-') }}">{{ row.evidence_origin }}</span>
+        </td>
+        <td>{{ row.signal_count }}</td>
+        <td><code>{{ row.detector_set_version }}</code></td>
+        <td><a href="/investigate/analyses/{{ row.run_id }}">{{ row.run_id }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

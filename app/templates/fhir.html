@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel" aria-labelledby="fhir-heading">
+  <h2 id="fhir-heading">FHIR export</h2>
+
+  {% if hint and not packet %}
+  <p class="lede">{{ hint }}</p>
+  <p><a href="/upload">Submit an observation</a> to begin.</p>
+  {% endif %}
+
+  {% if packet %}
+  <p class="badge">{{ packet.workflow_state.value }} · {{ packet.site.display_name }}</p>
+  <p class="meta">Packet <code>{{ packet.packet_id }}</code></p>
+  {% endif %}
+
+  {% if export and meta %}
+  <section class="export-meta" aria-labelledby="meta-heading">
+    <h3 id="meta-heading">Export result (honest scope)</h3>
+    <p role="status">
+      This Bundle is produced by ConfirmGate’s structural mapper and StructuralGuard.
+      It is <strong>not</strong> claimed as OAH IG validator–green unless a real validator ran and passed.
+      Current validation status: <strong>{{ meta.validation_status }}</strong> — {{ meta.validation_note }}
+    </p>
+    <dl class="snapshot">
+      <dt>Mapper version</dt><dd><code>{{ meta.mapper_version }}</code></dd>
+      <dt>Ruleset version</dt><dd><code>{{ meta.rule_engine_version }}</code></dd>
+      <dt>IG version (reference)</dt><dd><code>{{ profiles.ig_version }}</code></dd>
+      <dt>Bundle hash (SHA-256)</dt><dd><code>{{ meta.bundle_hash }}</code></dd>
+      <dt>Resource count</dt><dd>{{ meta.resource_count }}</dd>
+      <dt>Bundle type</dt><dd>{{ meta.bundle_type }}</dd>
+      <dt>Profiles (structural)</dt>
+      <dd>
+        <ul>
+          <li><code>{{ profiles.location }}</code></li>
+          <li><code>{{ profiles.observation_indicators }}</code></li>
+        </ul>
+      </dd>
+      <dt>Supported export scope</dt><dd>{{ meta.supported_export_scope }}</dd>
+    </dl>
+    {% if one_health_sentence %}
+    <blockquote class="one-health">
+      <p>{{ one_health_sentence }}</p>
+      <footer>Cited association language — not a diagnosis.</footer>
+    </blockquote>
+    {% endif %}
+    <p>
+      <a class="button-link" href="/fhir/bundle?packet_id={{ packet.packet_id }}">Download Bundle JSON</a>
+    </p>
+  </section>
+  {% elif packet and not export %}
+  <p>
+    {% if packet.workflow_state.value == 'CONFIRMED' %}
+    Confirmed but not finalized — exporter refuses until FINALIZED.
+    <a href="/observation/{{ packet.packet_id }}">Return to finalize</a>
+    {% else %}
+    <a href="/observation/{{ packet.packet_id }}">Return to observation</a>
+    {% endif %}
+  </p>
+  {% endif %}
+
+  {% if events %}
+  <details class="provenance">
+    <summary>Audit trail</summary>
+    <ol>
+      {% for event in events %}
+      <li>{{ event.at }} — {{ event.action }} ({% if event.actor_type == "citizen" and packet %}{{ packet.observer_ref | observer_pseudonym }}{% else %}{{ event.actor_type }}{% endif %})</li>
+      {% endfor %}
+    </ol>
+  </details>
+  {% endif %}
+</section>
+{% endblock %}

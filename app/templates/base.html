@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="brand">
+      <p class="eyebrow">OneAquaHealth · Track 3{% if product_line %} · {{ product_line }}{% endif %}</p>
+      <h1><a href="/upload">ConfirmGate</a></h1>
+      <p class="tagline">Human confirmation is the authority. AI is optional. FHIR only after finalize.</p>
+    </div>
+    <nav aria-label="Primary">
+      <a href="/upload">Submit</a>
+      <a href="/fhir">FHIR export</a>
+      <a href="/review">Reviewer desk</a>
+      <a href="/investigate">Investigate</a>
+    </nav>
+  </header>
+
+  <aside class="authority" aria-label="Authority chain">
+    <ol>
+      {% for key, label in authority_steps %}
+      <li>{{ label }}</li>
+      {% endfor %}
+    </ol>
+    <p class="meta">{% if not investigation_page %}Flag engine: {{ flag_engine_name }} · {{ flag_engine_version }} · {% endif %}{% if ai_model == "null" %}AI advisory: disabled{% else %}AI advisory: {{ ai_model }}{% endif %}</p>
+  </aside>
+
+  <main id="main">
+    {% if demo_mode %}<p class="meta" role="note">Public demo — data may be reset.</p>{% endif %}
+    {% if errors %}
+    <div class="alert" role="alert">
+      <p class="alert-title">Please check the following</p>
+      <ul>
+        {% for err in errors %}
+        <li>{{ err.message }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>ConfirmGate does not diagnose disease, score BMWP from photos, or claim an outbreak from a citizen visit.</p>
+    <p>AquaSignal reports evidence change, conflict, and insufficiency only — never cause attribution or water-safety conclusions.</p>
+    <p class="meta">{{ auth_note }}</p>
+    <p>
+      <a href="https://github.com/hl7-eu/oah">hl7-eu/oah</a> ·
+      <a href="https://apps.oneaquahealth.eu/login">CS app</a> ·
+      <a href="https://apps.oneaquahealth.eu/resmap/">Resilience Map</a>
+    </p>
+  </footer>
+</body>
+</html>
