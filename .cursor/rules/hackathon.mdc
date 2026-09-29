@@ -1,0 +1,17 @@
+---
+description: OneAquaHealth ConfirmGate hackathon constraints for every session
+alwaysApply: true
+---
+
+# ConfirmGate (OneAquaHealth)
+
+This repo is Track 3 observation integrity for the OneAquaHealth IEEE Global Hackathon only.
+
+- Authority: `docs/CONFIRMGATE-ARCHITECTURE-SPIKE.md`, then `docs/PHASE1-AUDIT.md`.
+- Devpost deadline: 4 Oct 2026 9:00 PM PDT (5 Oct 2026 09:30 IST). Judging 5–15 Oct; winners 24 Oct at IEEE iGET. Keep the live URL up through judging.
+- Human confirm is authority. AI optional (NullAiAssist). FHIR only after finalize — never `preliminary`.
+- Ship a deployed web app with `/upload`, confirm, `/fhir`. Not a notebook, not Streamlit-only.
+- Cities: Coimbra, Benevento, Ghent, Oslo, Toulouse only.
+- Do not build: trust scores, blockchain, Isolation Forest demos, CS-app replacement, photo→BMWP/pathogen, StreamWitness factsheet checklist thesis.
+- Judging: Impact 30%, Innovation 20%, Technical 20%, UX 15%, Scale 15%. Video 3–5 min. Public GitHub. Commits on/after 14 Sep 2026.
+- Read `AGENTS.md` and the ConfirmGate spike before expanding scope.
