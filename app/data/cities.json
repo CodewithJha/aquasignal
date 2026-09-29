@@ -1,0 +1,7 @@
+[
+  {"id": "coimbra", "name": "Coimbra", "country": "Portugal"},
+  {"id": "benevento", "name": "Benevento", "country": "Italy"},
+  {"id": "ghent", "name": "Ghent", "country": "Belgium"},
+  {"id": "oslo", "name": "Oslo", "country": "Norway"},
+  {"id": "toulouse", "name": "Toulouse", "country": "France"}
+]
