@@ -1,0 +1,10 @@
+{
+  "site_id": "coimbra",
+  "notes": "Demo fixture — sensory triad only",
+  "fields": {
+    "foam": "present",
+    "colour": "clear",
+    "smell": "none"
+  },
+  "one_health_sentence": "Degraded urban streams are associated with One Health pressures described in the OneAquaHealth Policy Brief (study-level association language). This observation does not diagnose disease or confirm an outbreak."
+}

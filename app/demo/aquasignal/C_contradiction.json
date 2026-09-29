@@ -1,0 +1,19 @@
+{
+  "label": "C_contradiction",
+  "description": "Coimbra same-visit foam present vs absent, two hours apart (synthetic fixture).",
+  "source_class": "fixture",
+  "is_synthetic": true,
+  "site_id": "coimbra",
+  "observations": [
+    {
+      "evidence_id": "fix_c_hi",
+      "observed_at": "2026-09-10T09:00:00+00:00",
+      "fields": {"foam": "present", "colour": "clear", "smell": "none"}
+    },
+    {
+      "evidence_id": "fix_c_lo",
+      "observed_at": "2026-09-10T11:00:00+00:00",
+      "fields": {"foam": "absent", "colour": "clear", "smell": "none"}
+    }
+  ]
+}

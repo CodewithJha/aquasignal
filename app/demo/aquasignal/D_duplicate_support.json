@@ -1,0 +1,24 @@
+{
+  "label": "D_duplicate_support",
+  "description": "Identical values at the same timestamp — one duplicate pair; the observation four days later is outside the 24 h comparison window (synthetic).",
+  "source_class": "fixture",
+  "is_synthetic": true,
+  "site_id": "coimbra",
+  "observations": [
+    {
+      "evidence_id": "fix_d_a",
+      "observed_at": "2026-09-10T10:00:00+00:00",
+      "fields": {"foam": "present", "macrophytes": "p"}
+    },
+    {
+      "evidence_id": "fix_d_b",
+      "observed_at": "2026-09-10T10:00:00+00:00",
+      "fields": {"foam": "present", "macrophytes": "p"}
+    },
+    {
+      "evidence_id": "fix_d_c",
+      "observed_at": "2026-09-14T10:00:00+00:00",
+      "fields": {"foam": "present", "macrophytes": "p"}
+    }
+  ]
+}

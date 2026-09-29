@@ -1,0 +1,12 @@
+{
+  "label": "E_insufficient",
+  "description": "Too few Coimbra foam points for temporal baseline (synthetic fixture).",
+  "source_class": "fixture",
+  "is_synthetic": true,
+  "site_id": "coimbra",
+  "observations": [
+    {"evidence_id": "fix_e_01", "observed_at": "2026-06-01T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_e_02", "observed_at": "2026-06-08T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_e_r1", "observed_at": "2026-09-01T10:00:00+00:00", "fields": {"foam": "abundant"}}
+  ]
+}

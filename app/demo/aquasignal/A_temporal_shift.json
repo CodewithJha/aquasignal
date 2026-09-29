@@ -1,0 +1,21 @@
+{
+  "label": "A_temporal_shift",
+  "description": "Coimbra foam baseline absent → recent abundant (labelled synthetic fixture, not live OAH).",
+  "source_class": "fixture",
+  "is_synthetic": true,
+  "site_id": "coimbra",
+  "observations": [
+    {"evidence_id": "fix_a_01", "observed_at": "2026-06-01T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_a_02", "observed_at": "2026-06-08T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_a_03", "observed_at": "2026-06-15T10:00:00+00:00", "fields": {"foam": "none"}},
+    {"evidence_id": "fix_a_04", "observed_at": "2026-06-22T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_a_05", "observed_at": "2026-06-29T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_a_06", "observed_at": "2026-07-06T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_a_07", "observed_at": "2026-07-13T10:00:00+00:00", "fields": {"foam": "none"}},
+    {"evidence_id": "fix_a_08", "observed_at": "2026-07-20T10:00:00+00:00", "fields": {"foam": "absent"}},
+    {"evidence_id": "fix_a_r1", "observed_at": "2026-09-01T10:00:00+00:00", "fields": {"foam": "abundant"}},
+    {"evidence_id": "fix_a_r2", "observed_at": "2026-09-05T10:00:00+00:00", "fields": {"foam": "abundant"}},
+    {"evidence_id": "fix_a_r3", "observed_at": "2026-09-10T10:00:00+00:00", "fields": {"foam": "present"}},
+    {"evidence_id": "fix_a_r4", "observed_at": "2026-09-15T10:00:00+00:00", "fields": {"foam": "abundant"}}
+  ]
+}
