@@ -11,10 +11,10 @@ from app.application.errors import PersistenceFailure
 from app.application.service import ObservationService
 from app.domain.packet import ObservationPacket
 from app.domain.value_objects import Actor
-from app.persistence.config import DatabaseSettings
 from app.persistence.factory import open_unit_of_work
 from app.persistence.migrations_runner import apply_migrations, list_migration_files
 from app.persistence.unit_of_work import SqliteUnitOfWork
+from tests.db import make_settings, sqlite_only
 from tests.persistence.aquasignal.conftest import (
     make_fixture_evidence,
     make_packet_evidence,
@@ -136,6 +136,7 @@ def test_migration_clean_db_applies_aquasignal(tmp_path: Path) -> None:
     conn.close()
 
 
+@sqlite_only
 def test_confirmgate_data_survives_aquasignal_migration(
     tmp_path: Path, coimbra, citizen: Actor
 ) -> None:
@@ -156,7 +157,7 @@ def test_confirmgate_data_survives_aquasignal_migration(
     )
     conn.commit()
 
-    settings = DatabaseSettings(sqlite_path=db)
+    settings = make_settings(db)
     # open_unit_of_work will apply pending v2 on prepare
     _conn, factory = open_unit_of_work(settings)
     svc = ObservationService(factory)

@@ -12,10 +12,10 @@ from app.domain.enums import Severity
 from app.domain.packet import make_flag
 from app.domain.sites import SEED_SITES, get_site, list_sites
 from app.flags.engine import DeterministicFlagEngine, NullFlagEngine
-from app.persistence.config import DatabaseSettings
 from app.web.errors import map_exception
 from app.web.flags_view import present_flags
 from app.web.forms import parse_submission
+from tests.db import make_settings
 
 
 def test_sites_catalog_matches_five_oah_cities() -> None:
@@ -96,7 +96,7 @@ def test_error_mapping_citizen_messages() -> None:
 
 
 def test_observation_service_wires_deterministic_engine(tmp_path: Path) -> None:
-    settings = DatabaseSettings(sqlite_path=tmp_path / "wire.sqlite3")
+    settings = make_settings(tmp_path / "wire.sqlite3")
     services = build_services(settings=settings)
     assert isinstance(services.flag_engine, DeterministicFlagEngine)
     assert isinstance(services.observation.flag_engine, DeterministicFlagEngine)
@@ -108,7 +108,7 @@ def test_observation_service_wires_deterministic_engine(tmp_path: Path) -> None:
 def test_observation_service_null_fallback_for_tests(tmp_path: Path) -> None:
     from app.persistence.factory import open_unit_of_work
 
-    settings = DatabaseSettings(sqlite_path=tmp_path / "null.sqlite3")
+    settings = make_settings(tmp_path / "null.sqlite3")
     _conn, factory = open_unit_of_work(settings)
     svc = ObservationService(factory)  # default NullFlagEngine
     assert isinstance(svc.flag_engine, NullFlagEngine)

@@ -15,9 +15,9 @@ from app.demo.fixture_loader import load_fixture
 from app.domain.investigation.enums import DecisionCode
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
 from app.persistence.factory import open_unit_of_work
 from app.persistence.migrations_runner import apply_migrations, list_migration_files
+from tests.db import make_settings
 from tests.application.aquasignal.conftest import make_analysis_params
 
 WORKERS = 8
@@ -93,10 +93,16 @@ def test_db_trigger_refuses_second_active_case(uow_factory, run_id) -> None:
         ) VALUES (?, 'coimbra', 'Coimbra', 'Coimbra', ?, ?, ?, 'ref', ?, ?, 1)
     """
     args = (row["window_start"], row["window_end"], run_id, "2026-09-27T00:00:00+00:00")
+    # Separate transactions: PostgreSQL aborts a transaction after any error.
     with uow_factory() as uow:
         uow._conn.execute(insert, ("case_raw_1", *args, "OPEN"))  # noqa: SLF001
-        with pytest.raises(sqlite3.IntegrityError, match="one active investigation case"):
+        uow.commit()
+    with uow_factory() as uow:
+        with pytest.raises(
+            sqlite3.IntegrityError, match="one active investigation case|one_active_per_run"
+        ):
             uow._conn.execute(insert, ("case_raw_2", *args, "UNDER_REVIEW"))  # noqa: SLF001
+    with uow_factory() as uow:
         uow._conn.execute(insert, ("case_raw_3", *args, "CLOSED"))  # noqa: SLF001
 
 
@@ -146,7 +152,7 @@ def test_migration_applies_to_pre_existing_db_with_duplicates(tmp_path: Path) ->
 def test_http_double_post_open_case_one_case(
     tmp_path: Path, coimbra, analysis_window, baseline_window, recent_window
 ) -> None:
-    settings = DatabaseSettings(sqlite_path=tmp_path / "http.sqlite3")
+    settings = make_settings(tmp_path / "http.sqlite3")
     services = build_services(settings=settings, flag_engine=DeterministicFlagEngine())
     run = services.analysis.analyze(
         site=coimbra,

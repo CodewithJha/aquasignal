@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.composition import build_services, reset_services, set_services
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
+from tests.db import make_settings
 
 NOTE = "Image content is not analyzed by this system."
 
@@ -18,7 +18,7 @@ def test_upload_and_review_pages_state_media_is_not_analyzed(tmp_path: Path) -> 
     reset_services()
     set_services(
         build_services(
-            settings=DatabaseSettings(sqlite_path=tmp_path / "media.sqlite3"),
+            settings=make_settings(tmp_path / "media.sqlite3"),
             flag_engine=DeterministicFlagEngine(),
         )
     )

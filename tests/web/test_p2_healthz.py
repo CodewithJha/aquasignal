@@ -11,8 +11,8 @@ import app.web.health_routes as health_routes
 from app.composition import build_services, reset_services, set_services
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
 from app.persistence.factory import database_reachable
+from tests.db import make_settings
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def client(tmp_path: Path):
     reset_services()
     set_services(
         build_services(
-            settings=DatabaseSettings(sqlite_path=tmp_path / "health.sqlite3"),
+            settings=make_settings(tmp_path / "health.sqlite3"),
             flag_engine=DeterministicFlagEngine(),
         )
     )

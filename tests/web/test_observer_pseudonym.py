@@ -29,8 +29,9 @@ from app.domain.sites import get_site
 from app.domain.value_objects import Actor, FieldValue
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
 from app.persistence.migrations_runner import apply_migrations, list_migration_files
+from app.persistence.factory import connect
+from tests.db import make_settings, sqlite_only
 
 PSEUDONYM_RE = re.compile(r"^Observer-[0-9A-F]{8}$")
 SENTENCE = "Cited association — not a diagnosis."
@@ -40,7 +41,7 @@ SENTENCE = "Cited association — not a diagnosis."
 def services(tmp_path: Path):
     reset_services()
     svc = build_services(
-        settings=DatabaseSettings(sqlite_path=tmp_path / "observer.sqlite3"),
+        settings=make_settings(tmp_path / "observer.sqlite3"),
         flag_engine=DeterministicFlagEngine(),
     )
     set_services(svc)
@@ -221,6 +222,7 @@ def test_fhir_bundle_has_no_token_ref_or_pseudonym(services) -> None:
         assert token not in page.text and ref not in page.text
 
 
+@sqlite_only
 def test_token_never_logged_or_stored(services, caplog, tmp_path: Path) -> None:
     caplog.set_level(logging.DEBUG)
     with TestClient(app) as c:
@@ -250,7 +252,7 @@ def test_pseudonym_does_not_change_reproducibility_hashes(services, tmp_path: Pa
     site = get_site("coimbra")
     before = services.analysis.analyze_finalized_for_site(site=site)
 
-    conn = sqlite3.connect(tmp_path / "observer.sqlite3")
+    conn = connect(make_settings(tmp_path / "observer.sqlite3"))
     conn.execute(
         "UPDATE observation_packets SET observer_ref = ? WHERE packet_id = ?",
         ("f" * 64, pids[0]),
@@ -270,6 +272,7 @@ def test_pseudonym_does_not_change_reproducibility_hashes(services, tmp_path: Pa
 # --- migration / old rows -----------------------------------------------------
 
 
+@sqlite_only
 def test_migration_preserves_pre_pseudonym_rows(tmp_path: Path) -> None:
     db = tmp_path / "pre005.sqlite3"
     conn = sqlite3.connect(db)
@@ -320,7 +323,7 @@ def test_migration_preserves_pre_pseudonym_rows(tmp_path: Path) -> None:
 
     reset_services()
     svc = build_services(
-        settings=DatabaseSettings(sqlite_path=db),
+        settings=make_settings(db),
         flag_engine=DeterministicFlagEngine(),
     )
     set_services(svc)

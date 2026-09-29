@@ -20,8 +20,8 @@ from app.domain.sites import get_site
 from app.domain.value_objects import Actor, FieldValue
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
 from app.persistence.factory import open_unit_of_work
+from tests.db import make_settings, sqlite_only
 from tests.application.aquasignal.conftest import make_analysis_params
 
 WORKERS = 8
@@ -30,14 +30,14 @@ WORKERS = 8
 @pytest.fixture
 def services(tmp_path: Path):
     svc = build_services(
-        settings=DatabaseSettings(sqlite_path=tmp_path / "concurrency.sqlite3"),
+        settings=make_settings(tmp_path / "concurrency.sqlite3"),
         flag_engine=DeterministicFlagEngine(),
     )
     yield svc
 
 
 def test_uow_connections_are_not_shared(tmp_path: Path) -> None:
-    conn, factory = open_unit_of_work(DatabaseSettings(sqlite_path=tmp_path / "iso.sqlite3"))
+    conn, factory = open_unit_of_work(make_settings(tmp_path / "iso.sqlite3"))
     conn.close()
     a, b = factory(), factory()
     assert a._conn is not b._conn  # noqa: SLF001
@@ -47,8 +47,9 @@ def test_uow_connections_are_not_shared(tmp_path: Path) -> None:
         a._conn.execute("SELECT 1")  # noqa: SLF001 — closed on exit
 
 
+@sqlite_only
 def test_wal_and_busy_timeout_enabled(tmp_path: Path) -> None:
-    conn, factory = open_unit_of_work(DatabaseSettings(sqlite_path=tmp_path / "wal.sqlite3"))
+    conn, factory = open_unit_of_work(make_settings(tmp_path / "wal.sqlite3"))
     assert conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
     conn.close()
     uow = factory()

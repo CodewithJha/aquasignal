@@ -18,11 +18,11 @@ from app.fhir.errors import FhirExportRefused
 from app.fhir.exporter import export_bundle_with_meta
 from app.fhir.validator import NullFhirValidator
 from app.flags.engine import DeterministicFlagEngine
-from app.persistence.config import DatabaseSettings
+from tests.db import make_settings
 
 
 def _services(tmp_path: Path, ai) -> CitizenFlowService:
-    settings = DatabaseSettings(sqlite_path=tmp_path / "phase8.sqlite3")
+    settings = make_settings(tmp_path / "phase8.sqlite3")
     return build_services(
         settings=settings,
         flag_engine=DeterministicFlagEngine(),

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -12,12 +11,13 @@ from fastapi.testclient import TestClient
 from app.composition import build_services, reset_services, set_services
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
 from app.web.request_limits import (
     DEFAULT_MAX_UPLOAD_BYTES,
     MaxBodySizeMiddleware,
     max_upload_bytes,
 )
+from app.persistence.factory import connect
+from tests.db import make_settings
 
 FORM = {"site": "coimbra", "foam": "present", "colour": "clear", "smell": "none"}
 
@@ -32,7 +32,7 @@ def client(db_path: Path):
     reset_services()
     set_services(
         build_services(
-            settings=DatabaseSettings(sqlite_path=db_path),
+            settings=make_settings(db_path),
             flag_engine=DeterministicFlagEngine(),
         )
     )
@@ -42,7 +42,7 @@ def client(db_path: Path):
 
 
 def _packet_count(db_path: Path) -> int:
-    conn = sqlite3.connect(db_path)
+    conn = connect(make_settings(db_path))
     try:
         return conn.execute("SELECT COUNT(*) FROM observation_packets").fetchone()[0]
     finally:

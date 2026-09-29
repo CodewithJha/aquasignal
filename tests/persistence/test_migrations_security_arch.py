@@ -12,6 +12,7 @@ from app.domain.packet import ObservationPacket
 from app.domain.value_objects import Actor
 from app.persistence.config import resolve_sqlite_path
 from app.persistence.migrations_runner import apply_migrations, list_migration_files
+from tests.db import sqlite_only
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -150,6 +151,7 @@ def test_flags_have_no_persistence_web_fhir_ai_imports() -> None:
                     )
 
 
+@sqlite_only
 def test_isolated_temp_db_not_shared_machine_path(
     db_path: Path, service: ObservationService, coimbra, citizen: Actor
 ) -> None:

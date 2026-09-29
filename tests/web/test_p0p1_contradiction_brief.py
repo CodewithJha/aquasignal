@@ -24,16 +24,16 @@ from app.domain.sites import get_site
 from app.domain.value_objects import Actor, FieldValue
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
 from app.signals.models import EvidenceObservation
 from app.signals.params import ContradictionParams, TemporalBaselineParams
+from tests.db import make_settings
 
 
 @pytest.fixture
 def client(tmp_path: Path):
     reset_services()
     services = build_services(
-        settings=DatabaseSettings(sqlite_path=tmp_path / "p0p1.sqlite3"),
+        settings=make_settings(tmp_path / "p0p1.sqlite3"),
         flag_engine=DeterministicFlagEngine(),
     )
     set_services(services)

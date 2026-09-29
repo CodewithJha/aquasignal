@@ -12,7 +12,7 @@ from app.domain.signal.value_objects import TimeWindow
 from app.domain.sites import get_site
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
+from tests.db import make_settings
 from datetime import datetime, timezone
 from tests.application.aquasignal.conftest import make_analysis_params
 from tests.signals.fixture_loader import load_fixture
@@ -32,7 +32,7 @@ PROHIBITED = (
 def client(tmp_path: Path):
     reset_services()
     services = build_services(
-        settings=DatabaseSettings(sqlite_path=tmp_path / "a5_http.sqlite3"),
+        settings=make_settings(tmp_path / "a5_http.sqlite3"),
         flag_engine=DeterministicFlagEngine(),
     )
     set_services(services)

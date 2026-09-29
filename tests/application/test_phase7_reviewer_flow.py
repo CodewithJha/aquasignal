@@ -14,13 +14,13 @@ from app.domain.enums import WorkflowState
 from app.domain.sites import get_site
 from app.domain.value_objects import FieldValue
 from app.flags.engine import DeterministicFlagEngine
-from app.persistence.config import DatabaseSettings
+from tests.db import make_settings
 
 
 @pytest.fixture
 def services(tmp_path: Path):
     return build_services(
-        settings=DatabaseSettings(sqlite_path=tmp_path / "phase7.sqlite3"),
+        settings=make_settings(tmp_path / "phase7.sqlite3"),
         flag_engine=DeterministicFlagEngine(),
     )
 
@@ -129,7 +129,7 @@ def test_concurrency_conflict(services) -> None:
 
 
 def test_mutate_at_revision_raises_before_domain(tmp_path: Path) -> None:
-    settings = DatabaseSettings(sqlite_path=tmp_path / "rev.sqlite3")
+    settings = make_settings(tmp_path / "rev.sqlite3")
     services = build_services(
         settings=settings, flag_engine=DeterministicFlagEngine()
     )

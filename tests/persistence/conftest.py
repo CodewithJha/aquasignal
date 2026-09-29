@@ -12,6 +12,7 @@ from app.domain.packet import ObservationPacket
 from app.domain.value_objects import Actor, FieldValue, SiteRef
 from app.persistence.config import DatabaseSettings
 from app.persistence.factory import open_unit_of_work
+from tests.db import make_settings
 
 
 @pytest.fixture
@@ -21,7 +22,7 @@ def db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def settings(db_path: Path) -> DatabaseSettings:
-    return DatabaseSettings(sqlite_path=db_path)
+    return make_settings(db_path)
 
 
 @pytest.fixture

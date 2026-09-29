@@ -18,7 +18,7 @@ from app.composition import build_services, reset_services, set_services
 from app.domain.enums import WorkflowState
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
-from app.persistence.config import DatabaseSettings
+from tests.db import make_settings
 
 FORM = {"site": "coimbra", "foam": "present", "colour": "clear", "smell": "none"}
 
@@ -26,7 +26,7 @@ FORM = {"site": "coimbra", "foam": "present", "colour": "clear", "smell": "none"
 def _client(tmp_path: Path, **overrides):
     reset_services()
     services = build_services(
-        settings=DatabaseSettings(sqlite_path=tmp_path / "ai_nb.sqlite3"),
+        settings=make_settings(tmp_path / "ai_nb.sqlite3"),
         flag_engine=DeterministicFlagEngine(),
         **overrides,
     )

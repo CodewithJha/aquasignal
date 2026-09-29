@@ -15,8 +15,8 @@ from app.domain.sites import get_site
 from app.domain.value_objects import FieldValue
 from app.fhir.validator import NullFhirValidator
 from app.flags.engine import DeterministicFlagEngine
-from app.persistence.config import DatabaseSettings
 from app.web.forms import parse_submission
+from tests.db import make_settings
 
 FIXTURE = (
     Path(__file__).resolve().parents[1] / "fixtures" / "demo_coimbra_sensory.json"
@@ -26,7 +26,7 @@ FIXTURE = (
 @pytest.fixture
 def services(tmp_path: Path):
     reset_services()
-    settings = DatabaseSettings(sqlite_path=tmp_path / "phase6.sqlite3")
+    settings = make_settings(tmp_path / "phase6.sqlite3")
     built = build_services(
         settings=settings,
         flag_engine=DeterministicFlagEngine(),
@@ -122,7 +122,7 @@ def test_persistence_survives_reload(services, flow: CitizenFlowService, tmp_pat
 
     # New service graph on same DB file
     rebuilt = build_services(
-        settings=DatabaseSettings(sqlite_path=services.settings.sqlite_path),
+        settings=services.settings,
         flag_engine=DeterministicFlagEngine(),
         ai=NullAiAssist(),
         fhir_validator=NullFhirValidator(),

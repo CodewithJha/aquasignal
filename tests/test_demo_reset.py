@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -16,8 +15,9 @@ from app.domain.sites import get_site
 from app.flags.engine import DeterministicFlagEngine
 from app.main import app
 from app.persistence.config import DatabaseSettings
-from app.persistence.factory import open_unit_of_work
+from app.persistence.factory import connect, open_unit_of_work
 from app.web.routes import configure_templates
+from tests.db import POSTGRES, make_settings, sqlite_only
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 TEMPLATES_DIR = APP_DIR / "templates"
@@ -41,11 +41,11 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def settings(tmp_path: Path) -> DatabaseSettings:
-    return DatabaseSettings(sqlite_path=tmp_path / "demo.sqlite3")
+    return make_settings(tmp_path / "demo.sqlite3")
 
 
 def _rows(settings: DatabaseSettings, sql: str) -> list[tuple]:
-    conn = sqlite3.connect(settings.sqlite_path)
+    conn = connect(settings)
     try:
         return [tuple(r) for r in conn.execute(sql).fetchall()]
     finally:
@@ -71,7 +71,17 @@ def _add_user_observation(settings: DatabaseSettings) -> str:
 
 def _schema(settings: DatabaseSettings) -> tuple[list[tuple], list[tuple]]:
     migrations = _rows(settings, "SELECT version, name, applied_at FROM schema_migrations ORDER BY version")
-    ddl = _rows(settings, "SELECT type, name, sql FROM sqlite_master ORDER BY type, name")
+    if POSTGRES:
+        ddl = _rows(
+            settings,
+            "SELECT table_name, column_name, data_type, column_default FROM information_schema.columns "
+            "WHERE table_schema = current_schema() ORDER BY table_name, column_name",
+        ) + _rows(
+            settings,
+            "SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = current_schema() ORDER BY indexname",
+        )
+    else:
+        ddl = _rows(settings, "SELECT type, name, sql FROM sqlite_master ORDER BY type, name")
     return migrations, ddl
 
 
@@ -118,6 +128,7 @@ def test_reset_refuses_by_default_env(settings: DatabaseSettings) -> None:
     assert packet_id
 
 
+@sqlite_only
 def test_cli_refuses_and_rejects_arguments(
     settings: DatabaseSettings, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -159,6 +170,7 @@ def test_reset_keeps_migrations_and_schema(settings: DatabaseSettings) -> None:
     assert [v for v, _n, _a in before[0]] == [1, 2, 3, 4, 5]
 
 
+@sqlite_only
 def test_reset_touches_only_database_files(settings: DatabaseSettings) -> None:
     def app_digest() -> str:
         h = hashlib.sha256()
@@ -194,6 +206,7 @@ def test_seeded_rows_are_labelled_synthetic(settings: DatabaseSettings) -> None:
     assert rows and all(r == ("fixture", 1) for r in rows)
 
 
+@sqlite_only
 def test_cli_output_has_no_secrets_or_paths(
     settings: DatabaseSettings, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
