@@ -1,0 +1,34 @@
+# Render Blueprint — public demo: Free web service (Docker) + Free PostgreSQL.
+# All state lives in PostgreSQL; the free web instance's filesystem is ephemeral.
+# DEMO_MODE / DEMO_RESET_ON_START are demo-only settings (code defaults are off):
+# every cold start restores the seeded synthetic dataset.
+services:
+  - type: web
+    name: aquasignal
+    runtime: docker
+    plan: free
+    region: frankfurt
+    repo: https://github.com/CodewithJha/aquasignal
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aquasignal-db
+          property: connectionString
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_RESET_ON_START
+        value: "true"
+      - key: AI_PROVIDER
+        value: "null"
+
+databases:
+  - name: aquasignal-db
+    plan: free
+    region: frankfurt
+    databaseName: aquasignal
+    user: aquasignal
+    postgresMajorVersion: "16"
