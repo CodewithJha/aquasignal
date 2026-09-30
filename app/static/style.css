@@ -756,6 +756,44 @@ legend + * { clear: both; }
 .snapshot dd { min-width: 0; overflow-wrap: anywhere; }
 .snapshot dd ul { margin: 0; padding-left: 1rem; }
 
+/* ---------- Lifecycle track (observation / review / FHIR) ---------- */
+.track {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  counter-reset: track;
+}
+.track li {
+  counter-increment: track;
+  position: relative;
+  padding: 0.9rem 0.5rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--meta);
+  border-top: 3px solid var(--paper-3);
+}
+.track li::before {
+  content: counter(track, decimal-leading-zero);
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+}
+.track li.done { color: var(--ink); border-top-color: var(--ink); }
+.track li.now { color: var(--signal); border-top-color: var(--signal); }
+.track li.now::after {
+  content: "";
+  position: absolute;
+  top: -7px; left: 0;
+  width: 11px; height: 11px;
+  background: var(--signal);
+}
+.track li.stop { color: var(--meta); border-top-style: dashed; }
+
 /* ---------- HOME ---------- */
 .home-thesis {
   padding-top: clamp(2.5rem, 7vw, 6rem);
@@ -935,6 +973,25 @@ legend + * { clear: both; }
   padding-top: 1.5rem;
   padding-left: calc(var(--label-col) + var(--col-gap));
 }
+
+/* ---------- Observation / review sheet ---------- */
+.sheet-head h2 { margin-top: 0.2rem; }
+.sheet-head .meta { margin-top: 0.85rem; }
+.sheet-head .observer { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.sheet section > h3, .sheet-main > section > h3 { margin: 2rem 0 0.75rem; }
+.correct-form { margin-top: 1.5rem; }
+.correct-form fieldset .fs-fields, .correct-form fieldset {
+  min-width: 0;
+}
+.correct-form fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0 1.5rem;
+}
+.correct-form legend, .correct-form .hint { grid-column: 1 / -1; }
+.correct-form .hint { margin: -0.5rem 0 1rem; }
+.correct-form button { grid-column: 1 / -1; justify-self: start; margin-bottom: 1rem; }
+.reject-form fieldset { display: block; }
 
 /* ---------- Footer ---------- */
 .site-footer {
