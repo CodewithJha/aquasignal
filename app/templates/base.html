@@ -7,55 +7,74 @@
   <link rel="preload" href="/static/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
+{% set path = request.url.path if request is defined else "" %}
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+  {% if demo_mode %}<p class="demo-banner" role="note">Public demo — data may be reset.</p>{% endif %}
   <header class="site-header">
-    <div class="brand">
-      <p class="eyebrow">OneAquaHealth · Track 3{% if product_line %} · {{ product_line }}{% endif %}</p>
-      <h1><a href="/upload">ConfirmGate</a></h1>
-      <p class="tagline">Human confirmation is the authority. AI is optional. FHIR only after finalize.</p>
+    <div class="wrap">
+      <div class="brand">
+        <p class="eyebrow">OneAquaHealth · Track 3{% if product_line %} · {{ product_line }}{% endif %}</p>
+        <h1><a href="/">AquaSignal<span class="wm-gate">ConfirmGate</span></a></h1>
+        <p class="tagline">Human confirmation is the authority. AI is optional. FHIR only after finalize.</p>
+      </div>
+      <nav class="primary-nav" aria-label="Primary">
+        <ol>
+          <li><a href="/upload"{% if path == "/upload" or path.startswith("/observation") %} aria-current="page"{% endif %}><span class="nav-stage">Observe</span>Submit</a></li>
+          <li><a href="/review"{% if path.startswith("/review") %} aria-current="page"{% endif %}><span class="nav-stage">Confirm</span>Reviewer desk</a></li>
+          <li><a href="/investigate"{% if path.startswith("/investigate") %} aria-current="page"{% endif %}><span class="nav-stage">Detect</span>Investigate</a></li>
+          <li><a href="/fhir"{% if path.startswith("/fhir") %} aria-current="page"{% endif %}><span class="nav-stage">Export</span>FHIR export</a></li>
+        </ol>
+      </nav>
     </div>
-    <nav aria-label="Primary">
-      <a href="/upload">Submit</a>
-      <a href="/fhir">FHIR export</a>
-      <a href="/review">Reviewer desk</a>
-      <a href="/investigate">Investigate</a>
-    </nav>
   </header>
 
-  <aside class="authority" aria-label="Authority chain">
-    <ol>
+  <details class="chain" open aria-label="Authority chain">
+    <summary class="wrap">
+      <span class="chain-title">Authority chain</span>
+      <span class="meta">{% if not investigation_page %}Flag engine: {{ flag_engine_name }} · {{ flag_engine_version }} · {% endif %}{% if ai_model == "null" %}AI advisory: disabled{% else %}AI advisory: {{ ai_model }}{% endif %}</span>
+    </summary>
+    <ol class="wrap">
       {% for key, label in authority_steps %}
       <li>{{ label }}</li>
       {% endfor %}
     </ol>
-    <p class="meta">{% if not investigation_page %}Flag engine: {{ flag_engine_name }} · {{ flag_engine_version }} · {% endif %}{% if ai_model == "null" %}AI advisory: disabled{% else %}AI advisory: {{ ai_model }}{% endif %}</p>
-  </aside>
+  </details>
 
-  <main id="main">
-    {% if demo_mode %}<p class="meta" role="note">Public demo — data may be reset.</p>{% endif %}
+  <main id="main" tabindex="-1">
     {% if errors %}
-    <div class="alert" role="alert">
-      <p class="alert-title">Please check the following</p>
-      <ul>
-        {% for err in errors %}
-        <li>{{ err.message }}</li>
-        {% endfor %}
-      </ul>
+    <div class="wrap">
+      <div class="alert" role="alert">
+        <p class="alert-title">Please check the following</p>
+        <ul>
+          {% for err in errors %}
+          <li>{{ err.message }}</li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
     {% endif %}
     {% block content %}{% endblock %}
   </main>
 
   <footer class="site-footer">
-    <p>ConfirmGate does not diagnose disease, score BMWP from photos, or claim an outbreak from a citizen visit.</p>
-    <p>AquaSignal reports evidence change, conflict, and insufficiency only — never cause attribution or water-safety conclusions.</p>
-    <p class="meta">{{ auth_note }}</p>
-    <p>
-      <a href="https://github.com/hl7-eu/oah">hl7-eu/oah</a> ·
-      <a href="https://apps.oneaquahealth.eu/login">CS app</a> ·
-      <a href="https://apps.oneaquahealth.eu/resmap/">Resilience Map</a>
-    </p>
+    <div class="wrap">
+      <div class="footer-claims">
+        <p>ConfirmGate does not diagnose disease, score BMWP from photos, or claim an outbreak from a citizen visit.</p>
+        <p>AquaSignal reports evidence change, conflict, and insufficiency only — never cause attribution or water-safety conclusions.</p>
+      </div>
+      <div>
+        <p class="meta">{{ auth_note }}</p>
+      </div>
+      <div class="footer-links">
+        <ul>
+          <li><a href="https://github.com/hl7-eu/oah">hl7-eu/oah</a></li>
+          <li><a href="https://apps.oneaquahealth.eu/login">CS app</a></li>
+          <li><a href="https://apps.oneaquahealth.eu/resmap/">Resilience Map</a></li>
+        </ul>
+        <p class="footer-type">Type: Archivo &amp; JetBrains Mono, <a href="/static/fonts/OFL-Archivo.txt">SIL OFL 1.1</a></p>
+      </div>
+    </div>
   </footer>
 </body>
 </html>
