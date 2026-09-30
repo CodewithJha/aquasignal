@@ -1,16 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="panel inv-panel" aria-labelledby="inv-heading">
-  <h2 id="inv-heading">Site Investigation Brief</h2>
-  <p class="lede">
-    Open a seeded OneAquaHealth site to browse append-only analysis runs.
-    Answers: what changed, what conflicts, what supports, how analysis was produced —
-    not pollution, disease, or water-safety claims.
-  </p>
+<section class="wrap inv-panel" aria-labelledby="inv-heading">
+  <header class="page-head">
+    <p class="kicker">Detect · site selection</p>
+    <h2 id="inv-heading">Site Investigation Brief</h2>
+    <p class="lede">
+      Open a seeded OneAquaHealth site to browse append-only analysis runs.
+      Answers: what changed, what conflicts, what supports, how analysis was produced —
+      not pollution, disease, or water-safety claims.
+    </p>
+  </header>
   <ul class="site-picker" role="list">
     {% for s in sites %}
     <li>
-      <a class="button-link" href="/investigate/sites/{{ s.id }}">{{ s.label }}</a>
+      <a class="site-row" href="/investigate/sites/{{ s.id }}">
+        <span class="site-idx" aria-hidden="true">{{ "%02d" | format(loop.index) }}</span>
+        <span class="site-name">{{ s.label }}</span>
+        <span class="site-go" aria-hidden="true">Open runs</span>
+      </a>
       {% if s.id == default_site_id %}
       <span class="badge" aria-label="Demo default">Demo</span>
       {% endif %}

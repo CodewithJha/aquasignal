@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="panel inv-panel" aria-labelledby="list-heading">
-  <p class="eyebrow">AquaSignal · system analysis history</p>
-  <h2 id="list-heading">{{ site.display_name }}</h2>
-  <p class="lede">
-    Append-only analysis runs for this site. Status is SUCCEEDED or FAILED —
-    never Good / Bad / Risk / Healthy.
-  </p>
+<section class="wrap inv-panel" aria-labelledby="list-heading">
+  <header class="page-head">
+    <p class="eyebrow">AquaSignal · system analysis history</p>
+    <h2 id="list-heading" class="site-title">{{ site.display_name }}</h2>
+    <p class="lede">
+      Append-only analysis runs for this site. Status is SUCCEEDED or FAILED —
+      never Good / Bad / Risk / Healthy.
+    </p>
+  </header>
 
   <form method="post" action="/investigate/sites/{{ site.site_id }}/analyze" class="inv-analyze">
     <p class="meta">
@@ -27,7 +29,7 @@
     <p><a href="/investigate">Choose another site</a></p>
   </div>
   {% else %}
-  <table class="worklist" aria-describedby="list-heading">
+  <table class="worklist stack" aria-describedby="list-heading">
     <caption class="visually-hidden">Analysis runs for {{ site.display_name }}</caption>
     <thead>
       <tr>
@@ -43,17 +45,17 @@
     <tbody>
       {% for row in analyses %}
       <tr>
-        <td><time datetime="{{ row.started_at.isoformat() }}">{{ row.started_at.strftime("%Y-%m-%d %H:%M") }}</time></td>
-        <td>
+        <td data-label="Started (UTC)" class="num"><time datetime="{{ row.started_at.isoformat() }}">{{ row.started_at.strftime("%Y-%m-%d %H:%M") }}</time></td>
+        <td data-label="Status">
           <span class="status-pill status-{{ row.status|lower }}" aria-label="Status {{ row.status }}">{{ row.status }}</span>
         </td>
-        <td>{{ row.evidence_count }}</td>
-        <td>
+        <td data-label="Observations" class="num">{{ row.evidence_count }}</td>
+        <td data-label="Evidence source">
           <span class="status-pill origin-{{ row.evidence_origin|lower|replace(' ', '-') }}">{{ row.evidence_origin }}</span>
         </td>
-        <td>{{ row.signal_count }}</td>
-        <td><code>{{ row.detector_set_version }}</code></td>
-        <td><a href="/investigate/analyses/{{ row.run_id }}">{{ row.run_id }}</a></td>
+        <td data-label="Signals" class="num">{{ row.signal_count }}</td>
+        <td data-label="Detector set"><code>{{ row.detector_set_version }}</code></td>
+        <td data-label="Run"><a class="mono" href="/investigate/analyses/{{ row.run_id }}">{{ row.run_id }}</a></td>
       </tr>
       {% endfor %}
     </tbody>

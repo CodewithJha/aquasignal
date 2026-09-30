@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="panel inv-panel" aria-labelledby="empty-heading">
-  <h2 id="empty-heading">{{ heading }}</h2>
-  <p class="lede" role="status">{{ message }}</p>
-  <p><a class="button-link" href="/investigate">Back to sites</a></p>
+<section class="wrap inv-panel" aria-labelledby="empty-heading">
+  <header class="page-head">
+    <p class="kicker">Not on record</p>
+    <h2 id="empty-heading">{{ heading }}</h2>
+    <p class="lede" role="status">{{ message }}</p>
+    <p><a class="button-link" href="/investigate">Back to sites</a></p>
+  </header>
 </section>
 {% endblock %}
