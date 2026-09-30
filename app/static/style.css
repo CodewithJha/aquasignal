@@ -1093,6 +1093,31 @@ legend + * { clear: both; }
 .correct-form button { grid-column: 1 / -1; justify-self: start; margin-bottom: 1rem; }
 .reject-form fieldset { display: block; }
 
+/* ---------- FHIR export layer ---------- */
+.spec-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.spec-strip li {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--ink);
+  margin: 0 -1px -1px 0;
+}
+.spec-strip li.on { background: var(--ink); color: var(--paper); }
+.spec-strip li.off { color: var(--meta); border-color: var(--paper-3); text-decoration: line-through; }
+.export-meta .snapshot dd code { font-size: 0.8rem; }
+.export-meta .snapshot dd { font-family: var(--mono); font-size: 0.85rem; }
+.hash { word-break: break-all; }
+
 /* ---------- Footer ---------- */
 .site-footer {
   background: var(--deep);
