@@ -6,6 +6,7 @@
   <title>{{ title }}</title>
   <link rel="preload" href="/static/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/static/style.css" />
+  <script src="/static/app.js" defer></script>
 </head>
 {% set path = request.url.path if request is defined else "" %}
 <body>
