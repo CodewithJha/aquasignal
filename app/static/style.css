@@ -756,6 +756,149 @@ legend + * { clear: both; }
 .snapshot dd { min-width: 0; overflow-wrap: anywhere; }
 .snapshot dd ul { margin: 0; padding-left: 1rem; }
 
+/* ---------- HOME ---------- */
+.home-thesis {
+  padding-top: clamp(2.5rem, 7vw, 6rem);
+  padding-bottom: clamp(2rem, 5vw, 4rem);
+}
+.thesis {
+  font-size: clamp(2.6rem, 8.2vw, 6rem);
+  font-weight: 850;
+  font-stretch: 122%;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  max-width: 14ch;
+}
+.thesis .thesis-rest {
+  display: block;
+  color: var(--signal);
+  font-stretch: 100%;
+  font-weight: 750;
+  font-size: 0.58em;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-top: 0.3em;
+  max-width: 17ch;
+}
+.home-thesis .lede { margin-top: 1.75rem; }
+
+/* The five-stage chain as an annotated survey line. */
+.stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 2px solid var(--ink);
+  position: relative;
+}
+.stages li { position: relative; }
+.stages a {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.1rem 1.25rem 1.5rem 0;
+  text-decoration: none;
+  transition: background-color 180ms ease;
+}
+.stages li + li a { padding-left: 1.25rem; border-left: var(--rule); }
+.stages a::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 0;
+  width: 12px; height: 12px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  transition: background-color 180ms ease, transform 180ms var(--ease);
+}
+.stages li + li a::before { left: -6px; }
+.stages .stage-code {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--meta);
+}
+.stages .stage-name {
+  display: block;
+  font-size: clamp(1.3rem, 1.85vw, 1.95rem);
+  font-weight: 850;
+  font-stretch: 108%;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  overflow-wrap: normal;
+  hyphens: none;
+  line-height: 1;
+  margin: 0.6rem 0 0.75rem;
+  transition: color 180ms ease;
+}
+.stages .stage-desc { font-size: 0.9rem; color: var(--ink-2); flex: 1; }
+.stages .stage-route {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  margin-top: 1rem;
+  color: var(--signal);
+}
+.stages a:hover { background: var(--paper-2); }
+.stages a:hover .stage-name, .stages a:focus-visible .stage-name { color: var(--signal); }
+.stages a:hover::before, .stages a:focus-visible::before { background: var(--signal); border-color: var(--signal); transform: scale(1.15); }
+.stages li.stage-human .stage-name::after {
+  content: "human";
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  font-stretch: 100%;
+  letter-spacing: 0.1em;
+  vertical-align: 0.9em;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.3rem;
+  background: var(--ink);
+  color: var(--flag);
+}
+
+.stations {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 1rem 2rem;
+  align-items: baseline;
+  padding-block: 1.75rem;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+}
+.stations h3 {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--meta);
+}
+.stations ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 2rem;
+}
+.stations li {
+  font-size: clamp(1.2rem, 2.2vw, 1.75rem);
+  font-weight: 750;
+  font-stretch: 115%;
+  letter-spacing: -0.02em;
+}
+.stations li small {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  font-stretch: 100%;
+  letter-spacing: 0.04em;
+  color: var(--meta);
+  margin-left: 0.35rem;
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   background: var(--deep);

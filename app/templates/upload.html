@@ -1,5 +1,71 @@
 {% extends "base.html" %}
 {% block content %}
+{% if request.url.path == "/" %}
+<section class="wrap home-thesis" aria-labelledby="thesis-heading">
+  <p class="kicker">OneAquaHealth · observation integrity · five city sites</p>
+  <h2 id="thesis-heading" class="thesis">AquaSignal <span class="thesis-rest">Environmental evidence, made investigable.</span></h2>
+  <p class="lede">
+    Citizen stream observations pass deterministic quality flags, a person confirms them,
+    versioned detectors compare finalized evidence over time, a person decides what it means,
+    and only finalized evidence leaves as FHIR.
+  </p>
+</section>
+
+<nav class="wrap" aria-label="How evidence moves">
+  <ol class="stages">
+    <li>
+      <a href="/upload">
+        <span class="stage-code">Citizen</span>
+        <span class="stage-name">Observe</span>
+        <span class="stage-desc">Protocol-lite field checks for one official OneAquaHealth site. A photo is optional and never analysed.</span>
+        <span class="stage-route">/upload</span>
+      </a>
+    </li>
+    <li>
+      <a href="/investigate/sites/coimbra">
+        <span class="stage-code">Deterministic</span>
+        <span class="stage-name">Detect</span>
+        <span class="stage-desc">Quality flags before confirm; versioned detectors for temporal shift, contradiction and duplicates after finalize.</span>
+        <span class="stage-route">/investigate/sites/coimbra</span>
+      </a>
+    </li>
+    <li>
+      <a href="/investigate">
+        <span class="stage-code">Dossier</span>
+        <span class="stage-name">Investigate</span>
+        <span class="stage-desc">What changed, which observations support or conflict, and how each analysis run was produced.</span>
+        <span class="stage-route">/investigate</span>
+      </a>
+    </li>
+    <li class="stage-human">
+      <a href="/review">
+        <span class="stage-code">Authority</span>
+        <span class="stage-name">Decide</span>
+        <span class="stage-desc">People confirm observations and record case decisions. AI advisory never confirms, finalizes or closes.</span>
+        <span class="stage-route">/review</span>
+      </a>
+    </li>
+    <li>
+      <a href="/fhir">
+        <span class="stage-code">Interoperability</span>
+        <span class="stage-name">Export</span>
+        <span class="stage-desc">FHIR R4 Bundle shaped to the OAH IG, produced from finalized snapshots only.</span>
+        <span class="stage-route">/fhir</span>
+      </a>
+    </li>
+  </ol>
+</nav>
+
+<section class="wrap" aria-labelledby="stations-heading">
+  <div class="stations">
+    <h3 id="stations-heading">Seeded sites</h3>
+    <ul>
+      {% for s in sites %}<li>{{ s.city }}</li>{% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
+
 <section class="panel" aria-labelledby="submit-heading">
   <h2 id="submit-heading">Submit a stream observation</h2>
   <p class="lede">
