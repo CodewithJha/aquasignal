@@ -899,6 +899,43 @@ legend + * { clear: both; }
   margin-left: 0.35rem;
 }
 
+/* ---------- Submit sheet ---------- */
+.sheet-form { --label-col: 15rem; --col-gap: clamp(1.5rem, 4vw, 3.5rem); }
+.sheet-form fieldset {
+  display: flow-root;
+  padding-top: 1.5rem;
+  padding-bottom: 1rem;
+}
+.sheet-form legend {
+  float: left;
+  width: var(--label-col);
+  margin: 0;
+  font-size: inherit;
+}
+.sheet-form legend + * { clear: none; }
+.sheet-form .fs-label { display: block; }
+.sheet-form .fs-label strong {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.sheet-form .fs-fields {
+  margin-left: calc(var(--label-col) + var(--col-gap));
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0 1.5rem;
+  min-width: 0;
+}
+.sheet-form .fs-fields > .hint { grid-column: 1 / -1; margin: -0.25rem 0 1rem; }
+.sheet-form .actions {
+  border-top: var(--rule-ink);
+  padding-top: 1.5rem;
+  padding-left: calc(var(--label-col) + var(--col-gap));
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   background: var(--deep);
