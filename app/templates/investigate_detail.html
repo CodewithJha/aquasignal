@@ -4,11 +4,12 @@
 
 {% macro pair_key(pair, idx) %}{% set ia = idx[pair.left.evidence_id] %}{% set ib = idx[pair.right.evidence_id] %}pair-e{{ [ia, ib]|min }}-e{{ [ia, ib]|max }}{% endmacro %}
 
-{% macro pair_card(pair) %}
-<li class="pair-card">
+{% macro pair_card(pair, idx) %}
+<li class="pair-card" id="{{ pair_key(pair, idx) }}" data-a="{{ pair.left.evidence_id }}" data-b="{{ pair.right.evidence_id }}">
   <p class="pair-head">
     <strong>Disagree</strong>
-    · recorded {{ pair.time_delta_label }} apart
+    <span class="rel-tag">{{ ex_tag(idx[pair.left.evidence_id]) }} × {{ ex_tag(idx[pair.right.evidence_id]) }}</span>
+    <span class="pair-when"><span class="pair-dot" aria-hidden="true">· </span>recorded {{ pair.time_delta_label }} apart</span>
   </p>
   <div class="table-scroll">
     <table class="pair-table">
@@ -44,8 +45,9 @@
 </li>
 {% endmacro %}
 
-{% macro pair_line(pair, verb) %}
-<li>
+{% macro pair_line(pair, verb, idx) %}
+<li id="{{ pair_key(pair, idx) }}" data-a="{{ pair.left.evidence_id }}" data-b="{{ pair.right.evidence_id }}">
+  <span class="rel-tag">{{ ex_tag(idx[pair.left.evidence_id]) }} × {{ ex_tag(idx[pair.right.evidence_id]) }}</span>
   {{ pair.left.short_label }} ({{ pair.left.observer_label }}) and {{ pair.right.short_label }} ({{ pair.right.observer_label }})
   · recorded {{ pair.time_delta_label }} apart · {{ verb }}
 </li>
@@ -312,82 +314,76 @@
   </section>
   {% endif %}
 
-  <section class="panel" aria-labelledby="found-heading">
-    <p class="eyebrow">SYSTEM ANALYSIS</p>
-    <h3 id="found-heading">What we found</h3>
-    {% if brief.findings %}
-    <ul class="found-list">
-      {% for line in brief.findings %}
-      <li>{{ line }}</li>
-      {% endfor %}
-    </ul>
-    {% elif not brief.failed %}
-    <p class="meta" role="status">No findings recorded for this run.</p>
-    {% endif %}
-    {% if brief.no_signal_success %}
-    <p class="meta inv-nosignal" role="status">
-      Detectors ran successfully and found no temporal shift or protocol conflict
-      in this evidence set. This is not a claim that water is safe.
-    </p>
-    {% endif %}
-    <p class="meta">Evidence change, conflict, and insufficiency only — no judgement of which observation is wrong, no cause, no water-safety conclusion.</p>
+  {# ------------------------------------------------------------ FINDINGS #}
+  <section class="wrap" aria-labelledby="found-heading">
+    <div class="labelled">
+      <p class="v-label" aria-hidden="true">What supports it</p>
+      <div class="body">
+        <h3 id="found-heading">What we found</h3>
+        {% if brief.findings %}
+        <ul class="found-list">
+          {% for line in brief.findings %}
+          <li>{{ line }}</li>
+          {% endfor %}
+        </ul>
+        {% elif not brief.failed %}
+        <p class="meta" role="status">No findings recorded for this run.</p>
+        {% endif %}
+        {% if brief.no_signal_success %}
+        <p class="meta inv-nosignal" role="status">
+          Detectors ran successfully and found no temporal shift or protocol conflict
+          in this evidence set. This is not a claim that water is safe.
+        </p>
+        {% endif %}
+        <p class="meta">Evidence change, conflict, and insufficiency only — no judgement of which observation is wrong, no cause, no water-safety conclusion.</p>
+      </div>
+    </div>
   </section>
 
-  <section class="panel" aria-labelledby="why-heading">
-    <h3 id="why-heading">Why?</h3>
-    {% if disagreeing %}
-    <p class="meta">
-      {{ disagreeing | length }} observation pair{{ "" if disagreeing | length == 1 else "s" }} disagree{{ "s" if disagreeing | length == 1 else "" }}.
-      Most relevant first (most differing fields, then closest in time).
-    </p>
-    <ul class="pair-list">
-      {% for pair in disagreeing[:3] %}{{ pair_card(pair) }}{% endfor %}
-    </ul>
-    {% if disagreeing | length > 3 %}
-    <details class="show-all">
-      <summary>Show all {{ disagreeing | length }} conflicts</summary>
-      <ul class="pair-list">
-        {% for pair in disagreeing[3:] %}{{ pair_card(pair) }}{% endfor %}
-      </ul>
-    </details>
-    {% endif %}
-    {% else %}
-    <p role="status">No observation pairs disagree in this run.</p>
-    {% endif %}
+  {# ------------------------------------------------------------ CONFLICTS #}
+  <section class="wrap" aria-labelledby="why-heading">
+    <div class="labelled">
+      <p class="v-label" aria-hidden="true">What conflicts</p>
+      <div class="body">
+        <h3 id="why-heading">Why?</h3>
+        {% if disagreeing %}
+        <p class="meta">
+          {{ disagreeing | length }} observation pair{{ "" if disagreeing | length == 1 else "s" }} disagree{{ "s" if disagreeing | length == 1 else "" }}.
+          Most relevant first (most differing fields, then closest in time).
+        </p>
+        <ul class="pair-list">
+          {% for pair in disagreeing[:3] %}{{ pair_card(pair, idx) }}{% endfor %}
+        </ul>
+        {% if disagreeing | length > 3 %}
+        <details class="show-all">
+          <summary>Show all {{ disagreeing | length }} conflicts</summary>
+          <ul class="pair-list">
+            {% for pair in disagreeing[3:] %}{{ pair_card(pair, idx) }}{% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+        {% else %}
+        <p role="status">No observation pairs disagree in this run.</p>
+        {% endif %}
 
-    {% if agreeing %}
-    <details class="show-all">
-      <summary>Show {{ agreeing | length }} agreeing pair{{ "" if agreeing | length == 1 else "s" }}</summary>
-      <ul class="pair-lines">
-        {% for pair in agreeing %}{{ pair_line(pair, "agree on every compared field") }}{% endfor %}
-      </ul>
-    </details>
-    {% endif %}
-    {% if duplicates %}
-    <details class="show-all">
-      <summary>Show {{ duplicates | length }} duplicate pair{{ "" if duplicates | length == 1 else "s" }}</summary>
-      <ul class="pair-lines">
-        {% for pair in duplicates %}{{ pair_line(pair, "identical values — likely one duplicate submission") }}{% endfor %}
-      </ul>
-    </details>
-    {% endif %}
-
-    {% for sig in brief.signals if sig.temporal_points %}
-    <details class="show-all temporal-viz">
-      <summary>Show temporal baseline timeline ({{ sig.temporal_points | length }} observations)</summary>
-      <p class="meta">Categorical / ordinal timeline (not continuous concentration)</p>
-      <ol class="timeline">
-        {% for pt in sig.temporal_points %}
-        <li>
-          <time datetime="{{ pt.observed_at }}">{{ pt.observed_at[:10] }}</time>
-          <span class="field-code">{{ pt.field_code }}</span>
-          <span class="field-value">{{ pt.value }}</span>
-          {% if pt.is_synthetic %}<span class="badge">SYNTHETIC</span>{% endif %}
-        </li>
-        {% endfor %}
-      </ol>
-    </details>
-    {% endfor %}
+        {% if agreeing %}
+        <details class="show-all">
+          <summary>Show {{ agreeing | length }} agreeing pair{{ "" if agreeing | length == 1 else "s" }}</summary>
+          <ul class="pair-lines">
+            {% for pair in agreeing %}{{ pair_line(pair, "agree on every compared field", idx) }}{% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+        {% if duplicates %}
+        <details class="show-all">
+          <summary>Show {{ duplicates | length }} duplicate pair{{ "" if duplicates | length == 1 else "s" }}</summary>
+          <ul class="pair-lines">
+            {% for pair in duplicates %}{{ pair_line(pair, "identical values — likely one duplicate submission", idx) }}{% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </div>
+    </div>
   </section>
 
   <section class="panel" aria-labelledby="evidence-heading">
