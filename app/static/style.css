@@ -1788,6 +1788,58 @@ legend + * { clear: both; }
 .ai-side ul { padding-left: 1rem; margin: 0.5rem 0; }
 .ai-side code { color: var(--on-dark); }
 
+/* ---------- Evidence register (exhibits) ---------- */
+.exhibits { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+.exhibit { border-bottom: var(--rule); transition: background-color 180ms ease; scroll-margin-top: 1rem; }
+.exhibit:target { background: var(--paper-2); }
+.exhibit > details > summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 3.5rem 9.5rem minmax(0, 1fr) minmax(0, 12rem) 1rem;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  padding: 0.7rem 0;
+}
+.exhibit > details > summary::-webkit-details-marker { display: none; }
+.exhibit > details > summary::after { content: "+"; font-family: var(--mono); color: var(--signal); text-align: right; }
+.exhibit > details[open] > summary::after { content: "−"; }
+.ex-id { font-family: var(--mono); font-weight: 700; font-size: 0.85rem; }
+.ex-time { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); }
+.ex-fields { font-size: 0.88rem; min-width: 0; }
+.ex-fields .ex-label { font-family: var(--mono); font-size: 0.75rem; font-weight: 600; margin-right: 0.5rem; }
+.ex-src { font-family: var(--mono); font-size: 0.7rem; color: var(--meta); text-align: right; overflow-wrap: anywhere; }
+.ex-src.is-syn { color: var(--signal); }
+.ex-src .observer { display: block; color: var(--ink-2); }
+.field-code { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; color: var(--meta); margin-right: 0.2rem; }
+.field-value { font-weight: 650; }
+.ex-prov {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+  margin: 0 0 1rem 4.5rem;
+  font-size: 0.85rem;
+  border-top: var(--rule);
+}
+.ex-prov dt, .ex-prov dd { margin: 0; padding: 0.4rem 0; border-bottom: var(--rule); }
+.ex-prov dt { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--meta); padding-top: 0.5rem; }
+.ex-prov dd { overflow-wrap: anywhere; }
+.ex-prov a { font-weight: 650; }
+
+/* ---------- Technical + history ---------- */
+.tech-details { border-top: var(--rule-ink); }
+.tech-details h4 { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--signal); }
+.repro-grid dd code, .repro-grid dd { font-size: 0.8rem; }
+.repro-grid dd code.copyable { user-select: all; }
+.authority-list { padding-left: 1.2rem; font-size: 0.9rem; }
+.signal-list, .run-history { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.signal-item { padding: 0.75rem 0; border-top: var(--rule); font-size: 0.9rem; }
+.signal-type { font-family: var(--mono); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal); }
+.signal-insufficient .signal-type { color: var(--meta); }
+.run-history li { padding: 0.5rem 0; border-top: var(--rule); font-family: var(--mono); font-size: 0.78rem; }
+.run-history .badge { font-size: 0.62rem; padding: 0 0.35rem; margin-left: 0.4rem; color: var(--signal); }
+.back-plate { padding-block: clamp(1.5rem, 3vw, 2.5rem) 0; }
+.back-plate .labelled { padding-block: 1.5rem; }
+
 /* ---------- Footer ---------- */
 .site-footer {
   background: var(--deep);
@@ -1837,32 +1889,3 @@ legend + * { clear: both; }
   button, .button-link { width: 100%; text-align: center; }
 }
 
-.repro-grid dd code.copyable {
-  user-select: all;
-  display: inline-block;
-  max-width: 100%;
-}
-.inv-detail {
-  max-width: 52rem;
-  margin: 0 auto;
-}
-.inv-detail .panel { margin-bottom: 1rem; }
-.synthetic-banner {
-  background: var(--warn-bg);
-  color: var(--warn-ink);
-  border: 1px solid #e6d39a;
-  border-radius: var(--radius);
-  padding: 0.55rem 0.75rem;
-  margin: 0.75rem 0;
-}
-.show-all summary, .tech-details summary, .inv-detail details > summary {
-  cursor: pointer;
-  color: var(--accent);
-  font-weight: 600;
-}
-.tech-details h4 { margin: 1rem 0 0.35rem; font-size: 1rem; }
-@media (max-width: 720px) {
-  .conflict-grid { grid-template-columns: 1fr; }
-  .inv-counts { grid-template-columns: repeat(2, 1fr); }
-  .evidence-table td:first-child { white-space: normal; }
-}
