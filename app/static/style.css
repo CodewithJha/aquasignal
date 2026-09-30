@@ -1,3 +1,253 @@
+/*
+  AquaSignal / ConfirmGate — field-station evidence dossier.
+
+  THESIS   Evidence is laid out like exhibits on a survey table: indexed,
+           dated, connected by drawn relations. The human decision is the
+           heaviest object on the page. Refuses SaaS card dashboards.
+  WORLD    Cool chalk paper, green-graphite "light-table" bands, signal red for
+           signals, sea-glass for environmental / state information, hazard
+           amber reserved for one exceptional state (a case awaiting a
+           human). Archivo (expanded for display, normal for text) + JetBrains
+           Mono for identifiers, times, versions and hashes. Thin rules,
+           vertical labels, almost no rounded containers.
+  MOTION   One authored moment: timeline markers settle in sequence, relation
+           arcs draw across them. Everything else is 150–200 ms state feedback.
+           Disabled under prefers-reduced-motion.
+*/
+
+/* ---------- Fonts (self-hosted, SIL OFL — see /static/fonts/OFL-*.txt) ---------- */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url("/static/fonts/archivo-latin-standard-normal.woff2") format("woff2-variations"),
+       url("/static/fonts/archivo-latin-standard-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url("/static/fonts/archivo-latin-ext-standard-normal.woff2") format("woff2-variations"),
+       url("/static/fonts/archivo-latin-ext-standard-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("/static/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations"),
+       url("/static/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("/static/fonts/jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations"),
+       url("/static/fonts/jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------- Tokens ---------- */
+:root {
+  /* surfaces */
+  --deep: #0c1816;
+  --slate: #142420;
+  --slate-2: #1c2f2b;
+  --slate-line: #2f4540;
+  --paper: #e7ebe6;
+  --paper-2: #dbe1db;
+  --paper-3: #bfc9c2;
+  --field: #f2f5f1;
+  --field-hover: #f8faf7;
+  /* text */
+  --ink: #0d1413;
+  --ink-2: #2c3937;
+  --meta: #4e5c59;
+  --on-dark: #e7ebe6;
+  --meta-d: #94a39f;
+  /* signal + state */
+  --signal: #b3162f;
+  --signal-d: #f5646c;
+  --signal-wash: #f5d8db;
+  --state: #3b6660;
+  --state-d: #8db8ae;
+  --state-wash: #d3e2dd;
+  --flag: #f0b429;
+  /* type */
+  --sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* rhythm */
+  --wrap: 84rem;
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --rule: 1px solid var(--paper-3);
+  --rule-ink: 1px solid var(--ink);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --focus: var(--ink);
+  color-scheme: light;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  font-stretch: 100%;
+  color: var(--ink);
+  background: var(--paper);
+  overflow-wrap: break-word;
+  position: relative;
+}
+
+/* Paper grain — a single lightweight SVG turbulence tile, non-interactive. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+img, svg { max-width: 100%; }
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+a:hover { text-decoration-thickness: 2px; }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.band-dark :focus-visible, .site-header :focus-visible, .site-footer :focus-visible,
+.decide :focus-visible, .demo-banner :focus-visible { --focus: var(--flag); }
+
+::selection { background: var(--ink); color: var(--flag); }
+
+h1, h2, h3, h4 {
+  font-family: var(--sans);
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+h2 {
+  font-size: clamp(2rem, 4.6vw, 3.6rem);
+  font-weight: 800;
+  font-stretch: 118%;
+  letter-spacing: -0.025em;
+}
+h3 {
+  font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+  font-weight: 750;
+  font-stretch: 112%;
+  letter-spacing: -0.015em;
+}
+h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  font-stretch: 108%;
+  letter-spacing: 0.01em;
+  margin: 1.5rem 0 0.4rem;
+}
+p { margin: 0 0 0.75rem; }
+p:last-child { margin-bottom: 0; }
+
+code, kbd, samp, .mono {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+code { overflow-wrap: anywhere; }
+
+.meta {
+  color: var(--meta);
+  font-size: 0.875rem;
+}
+.band-dark .meta, .site-header .meta, .site-footer .meta, .decide .meta { color: var(--meta-d); }
+
+.lede {
+  font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+  line-height: 1.5;
+  max-width: 44rem;
+  color: var(--ink-2);
+}
+.hint, .req-note {
+  display: block;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--meta);
+  margin-top: 0.3rem;
+  max-width: 60ch;
+}
+.req-note { display: inline; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.02em; margin-left: 0.4rem; }
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--signal);
+  margin: 0 0 0.9rem;
+}
+.band-dark .kicker, .decide .kicker { color: var(--signal-d); }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 200;
+  background: var(--flag);
+  color: var(--deep);
+  font-weight: 700;
+  padding: 0.6rem 1rem;
+  text-decoration: none;
+}
+.skip-link:focus { top: 1rem; }
+
 /* ConfirmGate Phase 6 — restrained civic / health UI (no fake AI dashboard). */
 
 :root {
@@ -18,21 +268,6 @@
   --max: 40rem;
   --font: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
   --sans: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", sans-serif;
-}
-
-* { box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  margin: 0;
-  font-family: var(--sans);
-  color: var(--ink);
-  background:
-    linear-gradient(180deg, #e8eef5 0%, var(--paper) 12rem),
-    var(--paper);
-  line-height: 1.5;
-  min-height: 100vh;
 }
 
 .skip-link {
@@ -107,14 +342,6 @@ nav a { color: var(--accent); font-weight: 600; }
   border-radius: var(--radius);
   padding: 1.25rem;
 }
-
-h2, h3 {
-  font-family: var(--font);
-  line-height: 1.25;
-  margin-top: 0;
-}
-
-.lede { color: var(--muted); }
 
 label {
   display: block;
@@ -263,16 +490,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .findings code { font-size: 0.8em; }
 .audit { padding-left: 1.2rem; color: var(--muted); font-size: 0.9rem; }
 .muted { opacity: 0.65; }
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
 button.secondary {
   background: transparent;
   color: var(--accent);
@@ -327,12 +544,6 @@ button.danger {
   margin-top: 2rem;
 }
 .site-footer a { color: var(--accent); }
-
-code {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.88em;
-  word-break: break-all;
-}
 
 @media (max-width: 560px) {
   .site-header, main, .site-footer, .authority { padding: 0.85rem 1rem; }
