@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="panel" aria-labelledby="queue-heading">
-  <header class="obs-header">
+<section class="wrap" aria-labelledby="queue-heading">
+  <header class="page-head">
+    <p class="kicker">Confirm · reviewer desk</p>
     <h2 id="queue-heading">Reviewer worklist</h2>
     <p class="lede">
       Packets in <code>NEEDS_REVIEW</code> awaiting curator decision.
@@ -14,10 +15,15 @@
   </header>
 
   {% if not items %}
-  <p class="ok" role="status">Queue empty. Escalate a flagged packet from the citizen surface, or seed a demo fixture via the real escalate path.</p>
-  <p><a href="/upload">Citizen submit</a></p>
+  <div class="empty-plate">
+    <p class="empty-count" aria-hidden="true">0</p>
+    <div>
+      <p class="ok" role="status">Queue empty. Escalate a flagged packet from the citizen surface, or seed a demo fixture via the real escalate path.</p>
+      <p><a href="/upload">Citizen submit</a></p>
+    </div>
+  </div>
   {% else %}
-  <table class="worklist">
+  <table class="worklist stack">
     <caption class="visually-hidden">NEEDS_REVIEW packets</caption>
     <thead>
       <tr>
@@ -32,15 +38,15 @@
     <tbody>
       {% for item in items %}
       <tr>
-        <td><a href="/review/{{ item.packet_id }}">{{ item.packet_id[:10] }}…</a></td>
-        <td>{{ item.site_label }}</td>
-        <td>{% if item.effective_at %}{{ item.effective_at.strftime('%Y-%m-%d %H:%M') }} UTC{% elif item.created_at %}{{ item.created_at.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}—{% endif %}</td>
-        <td>
+        <td data-label="Packet"><a class="mono" href="/review/{{ item.packet_id }}">{{ item.packet_id[:10] }}…</a></td>
+        <td data-label="Site">{{ item.site_label }}</td>
+        <td data-label="Time" class="num">{% if item.effective_at %}{{ item.effective_at.strftime('%Y-%m-%d %H:%M') }} UTC{% elif item.created_at %}{{ item.created_at.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}—{% endif %}</td>
+        <td data-label="Flags">
           <span class="flag-sev">{{ item.max_severity or 'none' }}</span>
           ×{{ item.flag_count }}
         </td>
-        <td><code>{{ item.workflow_state }}</code></td>
-        <td>{{ item.review_reason }}</td>
+        <td data-label="State"><code>{{ item.workflow_state }}</code></td>
+        <td data-label="Review reason">{{ item.review_reason }}</td>
       </tr>
       {% endfor %}
     </tbody>
