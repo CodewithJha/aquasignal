@@ -56,10 +56,48 @@
 {% set agreeing = brief.agreeing_pairs %}
 {% set duplicates = brief.duplicate_pairs %}
 
-<article class="inv-detail" aria-labelledby="brief-heading">
+{# Display-only evidence index: E-01… in time order. No domain data changes. #}
+{% set evs = brief.evidence | sort(attribute="observed_at") %}
+{% set idx = {} %}
+{% for ev in evs %}{% set _ = idx.update({ev.evidence_id: loop.index}) %}{% endfor %}
+{% set in_conflict = {} %}{% set in_support = {} %}{% set in_duplicate = {} %}{% set partners = {} %}
+{% for pair in brief.observation_pairs %}
+  {% set bucket = in_conflict if pair.outcome == "disagree" else (in_duplicate if pair.outcome == "duplicate" else in_support) %}
+  {% set _ = bucket.update({pair.left.evidence_id: 1, pair.right.evidence_id: 1}) %}
+{% endfor %}
+{% set temporal = namespace(field=None) %}
+{% for sig in brief.signals if sig.temporal_points and not sig.is_insufficient %}
+  {% if temporal.field is none %}{% set temporal.field = sig.temporal_points[0].field_code %}{% endif %}
+{% endfor %}
+{% set win = namespace(bs=None, be=None, rs=None, re=None, b0=None, b1=None, r0=None, r1=None) %}
+{% for sig in brief.signals if not sig.is_insufficient and sig.explanation.baseline_window is defined and sig.explanation.recent_window is defined %}
+  {% if win.bs is none %}
+  {% set win.bs = sig.explanation.baseline_window.start %}{% set win.be = sig.explanation.baseline_window.end %}
+  {% set win.rs = sig.explanation.recent_window.start %}{% set win.re = sig.explanation.recent_window.end %}
+  {% endif %}
+{% endfor %}
+{% if win.bs %}
+  {% for ev in evs %}
+    {% set t = ev.observed_at.isoformat() %}
+    {% if win.bs <= t < win.be %}{% if win.b0 is none %}{% set win.b0 = loop.index0 %}{% endif %}{% set win.b1 = loop.index0 %}{% endif %}
+    {% if win.rs <= t < win.re %}{% if win.r0 is none %}{% set win.r0 = loop.index0 %}{% endif %}{% set win.r1 = loop.index0 %}{% endif %}
+  {% endfor %}
+{% endif %}
+{% if temporal.field is none and disagreeing and disagreeing[0].conflicting_fields %}{% set temporal.field = disagreeing[0].conflicting_fields[0].field_code %}{% endif %}
+{% set open_case = brief.cases | rejectattr("is_terminal") | list %}
 
-  <header class="inv-hero panel">
-    <p class="eyebrow">SYSTEM ANALYSIS · not a human decision</p>
+<article class="dossier" aria-labelledby="brief-heading" data-dossier>
+
+  {# ------------------------------------------------------------ HEAD #}
+  <header class="wrap dossier-head">
+    <div class="dh-top">
+      <p class="eyebrow">SYSTEM ANALYSIS · not a human decision</p>
+      <span class="status-pill status-{{ brief.status|lower }}">{{ brief.status }}</span>
+      {% if brief.window_start and brief.window_end %}
+      <span><time datetime="{{ brief.window_start.isoformat() }}">{{ brief.window_start.strftime("%d %b %Y") }}</time> – <time datetime="{{ brief.window_end.isoformat() }}">{{ brief.window_end.strftime("%d %b %Y") }}</time> UTC</span>
+      {% endif %}
+    </div>
+    <p class="dh-run" aria-label="Analysis run {{ brief.run_id }}">{{ brief.run_id[:4] }}<b>{{ brief.run_id[4:] }}</b></p>
     <h2 id="brief-heading">Investigation summary — {{ brief.site_label }}</h2>
     {% if synthetic_count %}
     <p class="synthetic-banner" role="note">
@@ -67,39 +105,66 @@
       observations are labelled test data, not live OneAquaHealth observations.
     </p>
     {% endif %}
-    <dl class="snapshot summary-grid">
-      <dt>Site</dt><dd>{{ brief.site_label }} ({{ brief.city }})</dd>
-      <dt>Evidence</dt>
-      <dd>
-        {% if synthetic_count == brief.evidence_count and synthetic_count %}
-        {{ brief.evidence_count }} synthetic fixture observation{{ "" if brief.evidence_count == 1 else "s" }}
-        {% elif synthetic_count %}
-        {{ brief.evidence_count }} observations ({{ brief.evidence_count - synthetic_count }} finalized, {{ synthetic_count }} synthetic)
-        {% else %}
-        {{ brief.evidence_count }} finalized observation{{ "" if brief.evidence_count == 1 else "s" }}
-        {% endif %}
-      </dd>
-      <dt>Analysis window</dt>
-      <dd>
-        {% if brief.window_start and brief.window_end %}
-        <time datetime="{{ brief.window_start.isoformat() }}">{{ brief.window_start.strftime("%d %b %Y") }}</time>
-        –
-        <time datetime="{{ brief.window_end.isoformat() }}">{{ brief.window_end.strftime("%d %b %Y") }}</time>
-        (UTC)
-        {% else %}
-        Not recorded on this run
-        {% endif %}
-      </dd>
-      <dt>Status</dt>
-      <dd><span class="status-pill status-{{ brief.status|lower }}">{{ brief.status }}</span></dd>
-    </dl>
+
+    <div class="dh-grid">
+      <div>
+        <h3 class="visually-hidden">Detector signals</h3>
+        <ol class="events" aria-label="Detector signals on this run">
+          {% for sig in brief.signals %}
+          <li class="event{% if sig.is_insufficient %} is-insufficient{% endif %}" data-evs="{{ sig.evidence_ids | join(' ') }}">
+            <span class="event-type">{{ sig.signal_type | replace("_", " ") }}</span>
+            <span class="event-cites">cites {{ sig.evidence_count }} observation{{ "" if sig.evidence_count == 1 else "s" }}</span>
+          </li>
+          {% endfor %}
+          {% if duplicates %}
+          <li class="event is-relation" data-evs="{% for p in duplicates %}{{ p.left.evidence_id }} {{ p.right.evidence_id }} {% endfor %}">
+            <span class="event-type">Duplicate</span>
+            <span class="event-cites">{{ duplicates | length }} pair{{ "" if duplicates | length == 1 else "s" }} with identical values</span>
+          </li>
+          {% endif %}
+          {% if not brief.signals and not duplicates %}
+          <li class="event is-quiet">
+            <span class="event-type">No signal</span>
+            <span class="event-cites">{% if brief.failed %}analysis failed{% else %}detectors ran{% endif %}</span>
+          </li>
+          {% endif %}
+        </ol>
+      </div>
+      <dl class="snapshot summary-grid">
+        <dt>Site</dt><dd>{{ brief.site_label }} ({{ brief.city }})</dd>
+        <dt>Evidence</dt>
+        <dd>
+          {% if synthetic_count == brief.evidence_count and synthetic_count %}
+          {{ brief.evidence_count }} synthetic fixture observation{{ "" if brief.evidence_count == 1 else "s" }}
+          {% elif synthetic_count %}
+          {{ brief.evidence_count }} observations ({{ brief.evidence_count - synthetic_count }} finalized, {{ synthetic_count }} synthetic)
+          {% else %}
+          {{ brief.evidence_count }} finalized observation{{ "" if brief.evidence_count == 1 else "s" }}
+          {% endif %}
+        </dd>
+        <dt>Analysis window</dt>
+        <dd>
+          {% if brief.window_start and brief.window_end %}
+          <time datetime="{{ brief.window_start.isoformat() }}">{{ brief.window_start.strftime("%d %b %Y") }}</time>
+          –
+          <time datetime="{{ brief.window_end.isoformat() }}">{{ brief.window_end.strftime("%d %b %Y") }}</time>
+          (UTC)
+          {% else %}
+          Not recorded on this run
+          {% endif %}
+        </dd>
+        <dt>Status</dt>
+        <dd><span class="status-pill status-{{ brief.status|lower }}">{{ brief.status }}</span></dd>
+      </dl>
+    </div>
+
     {% if ps %}
     <dl class="inv-counts" aria-label="Analysis counts">
       <div>
         <dt>Observation pairs compared</dt>
         <dd>{{ ps.pairs_compared }}</dd>
       </div>
-      <div>
+      <div class="is-signal">
         <dt>Pairs that disagree</dt>
         <dd>{{ ps.disagreeing_pairs }}</dd>
       </div>
@@ -111,11 +176,11 @@
         <dt>Duplicate pairs</dt>
         <dd>{{ ps.duplicate_pairs }}</dd>
       </div>
-      <div>
+      <div class="is-signal">
         <dt>Detector signals</dt>
         <dd>{{ brief.signal_count }}</dd>
       </div>
-      <div>
+      <div class="is-human">
         <dt>Human decisions</dt>
         <dd>{{ decision_count.n }}</dd>
       </div>
@@ -126,22 +191,25 @@
       {% if ps and ps.comparison_window_label %}Observations are compared only when recorded within {{ ps.comparison_window_label }} of each other (same visit).{% endif %}
       <a href="/investigate/sites/{{ brief.site_id }}">All runs for this site</a>
     </p>
-    {% if advisory is defined and not advisory.available %}
-    <p class="meta inv-advisory-unavailable" role="status">
-      {% if advisory.validation_status == "null" %}
-      AI advisory: disabled. Deterministic analysis is complete without it.
-      {% else %}
-      AI advisory unavailable ({{ advisory.validation_status }}). Deterministic analysis remains available.
-      {% endif %}
-    </p>
-    {% endif %}
+
+    <a class="dh-decide" href="#case-heading">
+      <span class="dd-label">Human decision</span>
+      <span class="dd-state">
+        {% if open_case %}Case <span class="acid">{{ open_case[0].state }}</span> — awaiting a person
+        {% elif brief.cases %}Case {{ brief.cases[0].state }} — decided by a person
+        {% else %}No case open{% endif %}
+      </span>
+      <span class="dd-go">Go to decision ↓</span>
+    </a>
   </header>
 
   {% if brief.failed %}
-  <section class="panel inv-failed" aria-labelledby="failed-heading" role="alert">
-    <h3 id="failed-heading">Analysis failed</h3>
-    <p>{{ brief.failure_message or "Detectors could not complete for this run." }}</p>
-    <p class="meta">No stack traces are shown. See technical details below and re-seed if needed.</p>
+  <section class="wrap" aria-labelledby="failed-heading">
+    <div class="inv-failed" role="alert">
+      <h3 id="failed-heading">Analysis failed</h3>
+      <p>{{ brief.failure_message or "Detectors could not complete for this run." }}</p>
+      <p class="meta">No stack traces are shown. See technical details below and re-seed if needed.</p>
+    </div>
   </section>
   {% endif %}
 
@@ -258,6 +326,15 @@
     {% endif %}
   </section>
 
+    {% if advisory is defined and not advisory.available %}
+    <p class="meta inv-advisory-unavailable" role="status">
+      {% if advisory.validation_status == "null" %}
+      AI advisory: disabled. Deterministic analysis is complete without it.
+      {% else %}
+      AI advisory unavailable ({{ advisory.validation_status }}). Deterministic analysis remains available.
+      {% endif %}
+    </p>
+    {% endif %}
   {% if advisory is defined and advisory.available %}
   <section class="panel inv-advisory" aria-labelledby="advisory-heading">
     <p class="eyebrow">AI ADVISORY · not authority</p>
