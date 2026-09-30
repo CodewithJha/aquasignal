@@ -386,6 +386,120 @@
     </div>
   </section>
 
+  {# ------------------------------------------------------------ HUMAN DECISION #}
+  <section class="decide" aria-labelledby="case-heading">
+    <div class="wrap">
+      <div class="labelled">
+        <p class="v-label" aria-hidden="true">What a person decides</p>
+        <div class="body">
+          <p class="kicker">HUMAN DECISION · authority</p>
+          <h3 id="case-heading">Human decision</h3>
+          <p class="decide-note">{{ brief.human_review_note }}</p>
+
+          <div class="decide-grid">
+            <div>
+              {% if not brief.cases %}
+              <p role="status">No investigation case is open for this analysis.</p>
+              {% if brief.status == "SUCCEEDED" %}
+              <form method="post" action="/investigate/analyses/{{ brief.run_id }}/cases">
+                <button type="submit">Open investigation case</button>
+              </form>
+              {% endif %}
+              {% else %}
+              <ul class="case-list">
+                {% for case in brief.cases %}
+                <li class="case-item">
+                  <p class="case-line">
+                    <span class="visually-hidden">Case state</span>
+                    <strong class="case-state{% if case.is_terminal %} is-terminal{% endif %}">{{ case.state }}</strong>
+                    <span class="meta">
+                      {{ case.decisions | length }} human decision{{ "" if case.decisions | length == 1 else "s" }}
+                      · opened <time datetime="{{ case.opened_at.isoformat() }}">{{ case.opened_at.strftime("%d %b %Y %H:%M") }} UTC</time>
+                    </span>
+                  </p>
+                  {% if case.decisions %}
+                  <ol class="decision-list" aria-label="Human decisions">
+                    {% for d in case.decisions %}
+                    <li>
+                      <time datetime="{{ d.decided_at.isoformat() }}">{{ d.decided_at.strftime("%Y-%m-%d %H:%M") }} UTC</time>
+                      · <code>{{ d.decision_code }}</code>
+                      · {{ d.actor_type }} <code>{{ d.actor_id }}</code>
+                      <p>{{ d.rationale }}</p>
+                    </li>
+                    {% endfor %}
+                  </ol>
+                  {% else %}
+                  <p class="meta" role="status">No human decisions recorded yet.</p>
+                  {% endif %}
+                  {% if not case.is_terminal %}
+                  <form method="post" action="/investigate/cases/{{ case.case_id }}/decisions" class="decision-form">
+                    <input type="hidden" name="expected_version" value="{{ case.version }}" />
+                    <label for="decision-{{ case.case_id }}">Decision</label>
+                    <select id="decision-{{ case.case_id }}" name="decision_code" required>
+                      {% for value, label in decision_choices %}
+                      <option value="{{ value }}">{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                    <label for="rationale-{{ case.case_id }}">Rationale (required)</label>
+                    <textarea id="rationale-{{ case.case_id }}" name="rationale" rows="3" required></textarea>
+                    <button type="submit">Record human decision</button>
+                  </form>
+                  {% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </div>
+
+            <aside class="ai-side" aria-labelledby="advisory-heading">
+              <p class="ai-side-title" id="advisory-heading">AI advisory · not authority</p>
+              {% if advisory is defined and advisory.available %}
+              <p>{{ advisory.summary }}</p>
+              {% if advisory.signal_explanations %}
+              <ul>
+                {% for item in advisory.signal_explanations %}
+                <li><code>{{ item.signal_id }}</code> — {{ item.explanation }}</li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              {% if advisory.missing_evidence %}
+              <p class="meta">Suggested missing evidence (closed vocabulary):
+                {% for code in advisory.missing_evidence %}
+                <code>{{ code }}</code>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+              </p>
+              {% endif %}
+              {% if advisory.limitations %}
+              <ul class="meta">
+                {% for lim in advisory.limitations %}
+                <li>{{ lim }}</li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              <p class="meta">
+                Provider <code>{{ advisory.provider }}</code>
+                · model <code>{{ advisory.model }}</code>
+                · prompt <code>{{ advisory.prompt_version }}</code>
+                · brief hash <code class="copyable">{{ advisory.input_brief_hash }}</code>
+                · validation <code>{{ advisory.validation_status }}</code>
+              </p>
+              {% elif advisory is defined %}
+              <p class="inv-advisory-unavailable" role="status">
+                {% if advisory.validation_status == "null" %}
+                AI advisory: disabled. Deterministic analysis is complete without it.
+                {% else %}
+                AI advisory unavailable ({{ advisory.validation_status }}). Deterministic analysis remains available.
+                {% endif %}
+              </p>
+              {% endif %}
+              <p>It may restate signals. It cannot open, decide or close a case.</p>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" aria-labelledby="evidence-heading">
     <h3 id="evidence-heading">Evidence</h3>
     {% if not brief.evidence %}
@@ -418,105 +532,6 @@
         </tbody>
       </table>
     </div>
-    {% endif %}
-  </section>
-
-    {% if advisory is defined and not advisory.available %}
-    <p class="meta inv-advisory-unavailable" role="status">
-      {% if advisory.validation_status == "null" %}
-      AI advisory: disabled. Deterministic analysis is complete without it.
-      {% else %}
-      AI advisory unavailable ({{ advisory.validation_status }}). Deterministic analysis remains available.
-      {% endif %}
-    </p>
-    {% endif %}
-  {% if advisory is defined and advisory.available %}
-  <section class="panel inv-advisory" aria-labelledby="advisory-heading">
-    <p class="eyebrow">AI ADVISORY · not authority</p>
-    <h3 id="advisory-heading">AI advisory</h3>
-    <p>{{ advisory.summary }}</p>
-    {% if advisory.signal_explanations %}
-    <ul>
-      {% for item in advisory.signal_explanations %}
-      <li><code>{{ item.signal_id }}</code> — {{ item.explanation }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    {% if advisory.missing_evidence %}
-    <p class="meta">Suggested missing evidence (closed vocabulary):
-      {% for code in advisory.missing_evidence %}
-      <code>{{ code }}</code>{% if not loop.last %}, {% endif %}
-      {% endfor %}
-    </p>
-    {% endif %}
-    {% if advisory.limitations %}
-    <ul class="meta">
-      {% for lim in advisory.limitations %}
-      <li>{{ lim }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    <p class="meta">
-      Provider <code>{{ advisory.provider }}</code>
-      · model <code>{{ advisory.model }}</code>
-      · prompt <code>{{ advisory.prompt_version }}</code>
-      · brief hash <code class="copyable">{{ advisory.input_brief_hash }}</code>
-      · validation <code>{{ advisory.validation_status }}</code>
-    </p>
-  </section>
-  {% endif %}
-
-  <section class="panel" aria-labelledby="case-heading">
-    <p class="eyebrow">HUMAN DECISION · authority</p>
-    <h3 id="case-heading">Human decision</h3>
-    <p class="meta">{{ brief.human_review_note }}</p>
-    {% if not brief.cases %}
-    <p role="status">No investigation case is open for this analysis.</p>
-    {% if brief.status == "SUCCEEDED" %}
-    <form method="post" action="/investigate/analyses/{{ brief.run_id }}/cases">
-      <button type="submit">Open investigation case</button>
-    </form>
-    {% endif %}
-    {% else %}
-    <ul class="case-list">
-      {% for case in brief.cases %}
-      <li class="case-item">
-        <p>
-          Case state <strong>{{ case.state }}</strong>
-          · {{ case.decisions | length }} human decision{{ "" if case.decisions | length == 1 else "s" }}
-          · opened <time datetime="{{ case.opened_at.isoformat() }}">{{ case.opened_at.strftime("%d %b %Y %H:%M") }} UTC</time>
-        </p>
-        {% if case.decisions %}
-        <ol class="decision-list" aria-label="Human decisions">
-          {% for d in case.decisions %}
-          <li>
-            <time datetime="{{ d.decided_at.isoformat() }}">{{ d.decided_at.strftime("%Y-%m-%d %H:%M") }} UTC</time>
-            · <code>{{ d.decision_code }}</code>
-            · {{ d.actor_type }} <code>{{ d.actor_id }}</code>
-            <p>{{ d.rationale }}</p>
-          </li>
-          {% endfor %}
-        </ol>
-        {% else %}
-        <p class="meta" role="status">No human decisions recorded yet.</p>
-        {% endif %}
-        {% if not case.is_terminal %}
-        <form method="post" action="/investigate/cases/{{ case.case_id }}/decisions" class="decision-form">
-          <input type="hidden" name="expected_version" value="{{ case.version }}" />
-          <label for="decision-{{ case.case_id }}">Decision</label>
-          <select id="decision-{{ case.case_id }}" name="decision_code" required>
-            {% for value, label in decision_choices %}
-            <option value="{{ value }}">{{ label }}</option>
-            {% endfor %}
-          </select>
-          <label for="rationale-{{ case.case_id }}">Rationale (required)</label>
-          <textarea id="rationale-{{ case.case_id }}" name="rationale" rows="3" required></textarea>
-          <button type="submit">Record human decision</button>
-        </form>
-        {% endif %}
-      </li>
-      {% endfor %}
-    </ul>
     {% endif %}
   </section>
 
