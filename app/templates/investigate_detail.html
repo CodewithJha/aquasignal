@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% macro ex_tag(n) %}E-{{ "%02d"|format(n) }}{% endmacro %}
+
+{% macro pair_key(pair, idx) %}{% set ia = idx[pair.left.evidence_id] %}{% set ib = idx[pair.right.evidence_id] %}pair-e{{ [ia, ib]|min }}-e{{ [ia, ib]|max }}{% endmacro %}
+
 {% macro pair_card(pair) %}
 <li class="pair-card">
   <p class="pair-head">
@@ -209,6 +213,101 @@
       <h3 id="failed-heading">Analysis failed</h3>
       <p>{{ brief.failure_message or "Detectors could not complete for this run." }}</p>
       <p class="meta">No stack traces are shown. See technical details below and re-seed if needed.</p>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ------------------------------------------------------------ TIMELINE #}
+  {% if evs %}
+  <section class="band-dark ledger-band" aria-labelledby="changed-heading">
+    <div class="wrap">
+      <div class="labelled">
+        <p class="v-label" aria-hidden="true">What changed</p>
+        <div class="body">
+          <h3 id="changed-heading">Evidence timeline</h3>
+          <p class="meta tl-note">
+            Every frozen observation in time order, indexed E-01 to {{ ex_tag(evs | length) }}. Spacing shows sequence, not elapsed time.
+            Arcs join only the pairs the detector compared{% if ps and ps.comparison_window_label %} (recorded within {{ ps.comparison_window_label }}){% endif %}; observations outside that window stand alone.
+          </p>
+
+          <div class="tl-scroll">
+            <div class="tl{% if win.b0 is not none %} has-wins{% endif %}" style="--n: {{ evs | length }}">
+              <div class="tl-rel" aria-hidden="true">
+                {% for pair in brief.observation_pairs %}
+                {% set ia = idx[pair.left.evidence_id] - 1 %}{% set ib = idx[pair.right.evidence_id] - 1 %}
+                {% set a = [ia, ib]|min %}{% set b = [ia, ib]|max %}
+                <span class="arc arc-{{ pair.outcome }}" data-a="{{ pair.left.evidence_id }}" data-b="{{ pair.right.evidence_id }}" style="--a: {{ a }}; --s: {{ [b - a, 1]|max }}; --lane: {{ loop.index0 % 4 }}">
+                  <a class="arc-label" tabindex="-1" href="#{{ pair_key(pair, idx) }}" data-a="{{ pair.left.evidence_id }}" data-b="{{ pair.right.evidence_id }}">{% if pair.outcome == "disagree" %}Contradiction{% elif pair.outcome == "duplicate" %}Duplicate{% else %}Supports{% endif %}<span class="visually-hidden">: {{ ex_tag(a + 1) }} and {{ ex_tag(b + 1) }}</span></a>
+                </span>
+                {% endfor %}
+              </div>
+              <ol class="tl-marks" aria-label="Observations in time order">
+                {% for ev in evs %}
+                {% set prev = evs[loop.index0 - 1] if not loop.first else none %}
+                <li class="mark{% if ev.evidence_id in in_conflict %} is-conflict{% endif %}{% if ev.evidence_id in in_support %} is-support{% endif %}{% if ev.evidence_id in in_duplicate %} is-duplicate{% endif %}" data-ev="{{ ev.evidence_id }}">
+                  <a href="#ex-{{ loop.index }}" style="--i: {{ loop.index0 }}">
+                    <span class="mark-dot" aria-hidden="true"></span>
+                    <span class="mark-id">{{ ex_tag(loop.index) }}</span>
+                    <time class="mark-date" datetime="{{ ev.observed_at.isoformat() }}">{{ ev.observed_at.strftime("%d %b %y") }}</time>
+                    <span class="mark-time">{{ ev.observed_at.strftime("%H:%M") }}</span>
+                    {% if temporal.field and ev.fields.get(temporal.field) %}<span class="mark-val">{{ temporal.field }} <b>{{ ev.fields.get(temporal.field) }}</b></span>{% endif %}
+                    <span class="mark-obs{% if ev.is_synthetic %} is-syn{% endif %}">{{ ev.observer_label }}</span>
+                    {% if prev and (ev.observed_at - prev.observed_at).days >= 2 %}<span class="mark-gap" title="Days since previous observation">+{{ (ev.observed_at - prev.observed_at).days }} d</span>{% endif %}
+                  </a>
+                </li>
+                {% endfor %}
+              </ol>
+              {% if win.b0 is not none %}
+              <div class="tl-wins">
+                <p class="tl-win" style="--a: {{ win.b0 }}; --s: {{ win.b1 - win.b0 + 1 }}"><span>Baseline window</span> <span class="tl-win-n">{{ win.b1 - win.b0 + 1 }} obs · {{ win.bs[:10] }} – {{ win.be[:10] }}</span></p>
+                {% if win.r0 is not none %}<p class="tl-win is-recent" style="--a: {{ win.r0 }}; --s: {{ win.r1 - win.r0 + 1 }}"><span>Recent window</span> <span class="tl-win-n">{{ win.r1 - win.r0 + 1 }} obs · {{ win.rs[:10] }} – {{ win.re[:10] }}</span></p>{% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <ul class="tl-legend" aria-label="Timeline key">
+            <li><span class="lg lg-disagree" aria-hidden="true"></span>Contradiction</li>
+            <li><span class="lg lg-agree" aria-hidden="true"></span>Supports</li>
+            <li><span class="lg lg-duplicate" aria-hidden="true"></span>Duplicate</li>
+            <li><span class="lg lg-dot fill" aria-hidden="true"></span>In a disagreeing pair</li>
+            {% if win.b0 is not none %}<li><span class="lg lg-win" aria-hidden="true"></span>Temporal baseline / recent window{% if temporal.field %} ({{ temporal.field }}){% endif %}</li>{% endif %}
+          </ul>
+
+          {% if brief.observation_pairs %}
+          <ul class="rel-index" aria-label="Compared pairs">
+            {% for pair in brief.observation_pairs %}
+            <li class="ri-{{ pair.outcome }}" data-a="{{ pair.left.evidence_id }}" data-b="{{ pair.right.evidence_id }}">
+              <a href="#{{ pair_key(pair, idx) }}">
+                <span class="ri-type">{% if pair.outcome == "disagree" %}CONTRADICTION{% elif pair.outcome == "duplicate" %}DUPLICATE{% else %}SUPPORTS{% endif %}</span>
+                <span class="ri-pair">{{ ex_tag(idx[pair.left.evidence_id]) }} × {{ ex_tag(idx[pair.right.evidence_id]) }}</span>
+                <span class="ri-meta">{% if pair.conflicting_fields %}{{ pair.conflicting_fields | map(attribute="field_code") | join(", ") }} · {% endif %}{{ pair.time_delta_label }} apart</span>
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="rel-none">No pair was recorded close enough in time to compare — no relations drawn.</p>
+          {% endif %}
+
+          {% for sig in brief.signals if sig.temporal_points %}
+          <details class="show-all temporal-viz">
+            <summary>Show temporal baseline timeline ({{ sig.temporal_points | length }} observations)</summary>
+            <p class="meta">Categorical / ordinal timeline (not continuous concentration)</p>
+            <ol class="timeline">
+              {% for pt in sig.temporal_points %}
+              <li>
+                <time datetime="{{ pt.observed_at }}">{{ pt.observed_at[:10] }}</time>
+                <span class="field-code">{{ pt.field_code }}</span>
+                <span class="field-value">{{ pt.value }}</span>
+                {% if pt.is_synthetic %}<span class="badge">SYNTHETIC</span>{% endif %}
+              </li>
+              {% endfor %}
+            </ol>
+          </details>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </section>
   {% endif %}
